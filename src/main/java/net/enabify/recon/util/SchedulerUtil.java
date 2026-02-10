@@ -33,6 +33,25 @@ public class SchedulerUtil {
     }
 
     /**
+     * グローバルスレッドで同期実行（Runnable版、戻り値不要）
+     * Bukkit: メインスレッドで実行
+     * Folia: GlobalRegionSchedulerで実行
+     */
+    public static void runGlobal(Plugin plugin, Runnable task) {
+        if (isFolia()) {
+            try {
+                Object scheduler = Bukkit.class.getMethod("getGlobalRegionScheduler").invoke(null);
+                Method execMethod = scheduler.getClass().getMethod("execute", Plugin.class, Runnable.class);
+                execMethod.invoke(scheduler, plugin, task);
+            } catch (Exception e) {
+                Bukkit.getScheduler().runTask(plugin, task);
+            }
+        } else {
+            Bukkit.getScheduler().runTask(plugin, task);
+        }
+    }
+
+    /**
      * グローバルスレッドで同期実行（コンソールコマンド等）
      * Bukkit: メインスレッドで実行
      * Folia: GlobalRegionSchedulerで実行
@@ -68,6 +87,30 @@ public class SchedulerUtil {
         }
 
         return future;
+    }
+
+    /**
+     * エンティティ（プレイヤー）のリージョンで同期実行（Runnable版、戻り値不要）
+     * Bukkit: メインスレッドで実行
+     * Folia: EntitySchedulerで実行
+     */
+    @SuppressWarnings("unchecked")
+    public static void runForEntity(Plugin plugin, Entity entity, Runnable task) {
+        if (isFolia()) {
+            try {
+                Object entityScheduler = entity.getClass().getMethod("getScheduler").invoke(entity);
+                Consumer<Object> consumer = (scheduledTask) -> task.run();
+                Method runMethod = entityScheduler.getClass().getMethod("run",
+                        Plugin.class, Consumer.class, Runnable.class);
+                runMethod.invoke(entityScheduler, plugin, consumer, (Runnable) () -> {
+                    // retired: エンティティが無効になった場合
+                });
+            } catch (Exception e) {
+                Bukkit.getScheduler().runTask(plugin, task);
+            }
+        } else {
+            Bukkit.getScheduler().runTask(plugin, task);
+        }
     }
 
     /**
@@ -110,6 +153,26 @@ public class SchedulerUtil {
         }
 
         return future;
+    }
+
+    /**
+     * グローバルで遅延実行（ワンショット）
+     */
+    @SuppressWarnings("unchecked")
+    public static void runGlobalLater(Plugin plugin, Runnable task, long delayTicks) {
+        if (isFolia()) {
+            try {
+                Object scheduler = Bukkit.class.getMethod("getGlobalRegionScheduler").invoke(null);
+                Consumer<Object> consumer = (scheduledTask) -> task.run();
+                Method runMethod = scheduler.getClass().getMethod("runDelayed",
+                        Plugin.class, Consumer.class, long.class);
+                runMethod.invoke(scheduler, plugin, consumer, Math.max(1, delayTicks));
+            } catch (Exception e) {
+                Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
+            }
+        } else {
+            Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
+        }
     }
 
     /**

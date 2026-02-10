@@ -14,10 +14,17 @@ import java.util.concurrent.TimeUnit;
  * コマンド実行エンジン
  * ユーザー設定に基づき、プレイヤーまたはコンソールとしてコマンドを実行する
  * HTTPスレッドからの呼び出しに対応し、適切なスレッドで実行を行う
+ *
+ * コマンド実行後、dispatchCommandの戻り値(boolean)をsuccessに反映し、
+ * キャプチャしたメッセージをresponseに格納して返す
+ * 非同期メッセージにも対応するため、実行後数ティック待機してから結果を返す
  */
 public class CommandRunner {
 
     private final Recon plugin;
+
+    /** コマンド結果待機のティック数（非同期メッセージ対応） */
+    private static final long RESPONSE_WAIT_TICKS = 3L;
 
     /**
      * コマンド実行結果
@@ -59,22 +66,34 @@ public class CommandRunner {
 
     /**
      * コンソールとしてコマンドを実行
-     * BufferedCommandSenderでメッセージをキャプチャする
+     * BufferedCommandSenderでメッセージをキャプチャし、dispatchCommandの戻り値でsuccess判定
+     * 実行後、数ティック待機してから結果を返す（非同期メッセージ対応）
      */
     private ExecutionResult executeAsConsole(String command) {
-        try {
-            CompletableFuture<String> future = SchedulerUtil.executeGlobal(plugin, () -> {
-                BufferedCommandSender sender = new BufferedCommandSender(Bukkit.getServer());
-                try {
-                    Bukkit.dispatchCommand(sender, command);
-                } catch (Exception e) {
-                    return "Error: " + e.getMessage();
-                }
-                return sender.getOutput();
-            });
+        CompletableFuture<ExecutionResult> future = new CompletableFuture<>();
 
-            String result = future.get(10, TimeUnit.SECONDS);
-            return new ExecutionResult(true, result, null);
+        SchedulerUtil.runGlobal(plugin, () -> {
+            BufferedCommandSender sender = new BufferedCommandSender(Bukkit.getServer());
+            boolean success;
+            try {
+                success = Bukkit.dispatchCommand(sender, command);
+            } catch (Exception e) {
+                future.complete(new ExecutionResult(false, "Error: " + e.getMessage(), null));
+                return;
+            }
+
+            final boolean cmdSuccess = success;
+
+            // 数ティック待機して非同期メッセージも取得してから結果を返す
+            SchedulerUtil.runGlobalLater(plugin, () -> {
+                String response = sender.getOutput();
+                String error = cmdSuccess ? null : "Command returned false.";
+                future.complete(new ExecutionResult(cmdSuccess, response, error));
+            }, RESPONSE_WAIT_TICKS);
+        });
+
+        try {
+            return future.get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
             return new ExecutionResult(false, null, "Internal error: " + e.getMessage());
         }
@@ -82,6 +101,7 @@ public class CommandRunner {
 
     /**
      * プレイヤーとしてコマンドを実行
+     * PlayerMessageInterceptorでNettyパイプラインを監視し、プレイヤーへ送信されるメッセージをキャプチャ
      * オフラインの場合はキュー保存またはエラーを返す
      */
     private ExecutionResult executeAsPlayer(ReconUser reconUser, String command, boolean queueIfOffline) {
@@ -99,12 +119,40 @@ public class CommandRunner {
             }
         }
 
-        try {
-            CompletableFuture<String> future = SchedulerUtil.executeForEntity(plugin, player, () ->
-                    executeWithPermissions(player, reconUser, command));
+        CompletableFuture<ExecutionResult> future = new CompletableFuture<>();
 
-            String result = future.get(10, TimeUnit.SECONDS);
-            return new ExecutionResult(true, result, null);
+        SchedulerUtil.runForEntity(plugin, player, () -> {
+            // Nettyインターセプターを注入してプレイヤーへのメッセージをキャプチャ
+            PlayerMessageInterceptor interceptor = new PlayerMessageInterceptor(player);
+            boolean interceptorActive = interceptor.inject();
+
+            boolean success;
+            try {
+                success = executeWithPermissions(player, reconUser, command);
+            } catch (Exception e) {
+                if (interceptorActive) interceptor.remove();
+                future.complete(new ExecutionResult(false, "Error: " + e.getMessage(), null));
+                return;
+            }
+
+            final boolean cmdSuccess = success;
+
+            // 数ティック待機して非同期メッセージも取得してから結果を返す
+            SchedulerUtil.runForEntityLater(plugin, player, () -> {
+                String response;
+                if (interceptorActive) {
+                    response = interceptor.getOutput();
+                    interceptor.remove();
+                } else {
+                    response = "";
+                }
+                String error = cmdSuccess ? null : "Command returned false.";
+                future.complete(new ExecutionResult(cmdSuccess, response, error));
+            }, RESPONSE_WAIT_TICKS);
+        });
+
+        try {
+            return future.get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
             return new ExecutionResult(false, null, "Internal error: " + e.getMessage());
         }
@@ -117,9 +165,9 @@ public class CommandRunner {
      * @param player    対象プレイヤー
      * @param reconUser ユーザー設定（OP・パーミッション情報）
      * @param command   実行するコマンド
-     * @return 実行結果メッセージ
+     * @return dispatchCommandの戻り値（true: 成功, false: 失敗）
      */
-    public String executeWithPermissions(Player player, ReconUser reconUser, String command) {
+    public boolean executeWithPermissions(Player player, ReconUser reconUser, String command) {
         boolean wasOp = player.isOp();
         PermissionAttachment attachment = null;
 
@@ -137,16 +185,8 @@ public class CommandRunner {
                 }
             }
 
-            // コマンドを実行
-            boolean result = Bukkit.dispatchCommand(player, command);
-
-            if (result) {
-                return "Command executed successfully.";
-            } else {
-                return "Command returned false (may indicate usage error).";
-            }
-        } catch (Exception e) {
-            return "Error executing command: " + e.getMessage();
+            // コマンドを実行し、結果を返す
+            return Bukkit.dispatchCommand(player, command);
         } finally {
             // OP権限を元に戻す
             if (reconUser.isOp() && !wasOp) {
