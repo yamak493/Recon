@@ -12,6 +12,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * プレイヤー参加時にキューに溜まったコマンドを実行するリスナー
@@ -31,6 +32,9 @@ public class PlayerJoinListener implements Listener {
 
         // 1秒（20ティック）遅延で実行: 参加処理が完了してから実行
         SchedulerUtil.runForEntityLater(plugin, player, () -> {
+            // 自動ユーザー作成
+            handleAutoRegistration(player);
+
             List<QueueManager.QueuedCommand> queue =
                     plugin.getQueueManager().getAndClearQueue(playerName);
 
@@ -59,5 +63,38 @@ public class PlayerJoinListener implements Listener {
                 }
             }
         }, 20L);
+    }
+
+    /**
+     * 自動ユーザー作成処理
+     */
+    private void handleAutoRegistration(Player player) {
+        if (!plugin.getConfigManager().isAutoRegistration()) {
+            return;
+        }
+
+        String playerName = player.getName();
+        // すでに同名のユーザーがいるか、またはこのプレイヤーに紐づくユーザーがいるか確認
+        if (plugin.getUserManager().userExists(playerName) ||
+                plugin.getUserManager().findByPlayer(playerName) != null) {
+            return;
+        }
+
+        // パスワードをランダム生成 (8桁)
+        String password = UUID.randomUUID().toString().substring(0, 8);
+        ReconUser newUser = new ReconUser(playerName, password);
+        newUser.setPlayer(playerName);
+
+        // ユーザー追加
+        plugin.getUserManager().addUser(newUser);
+
+        plugin.getLogger().info("Automatically created Recon profile for player: " + playerName);
+
+        // プレイヤーに通知
+        player.sendMessage("§b[Recon] §aThe Recon user was created automatically.");
+        player.sendMessage("§b[Recon] §7Username: §f" + playerName);
+        player.sendMessage("§b[Recon] §7Password: §f" + password);
+        player.sendMessage("§b[Recon] §cThis password will only be shown once. Please keep it safe.");
+        player.sendMessage("§b[Recon] §7To change the password, use §f/recon edit pw:<password>§7.");
     }
 }

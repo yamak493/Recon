@@ -15,6 +15,7 @@ public class ConfigManager {
     private final Recon plugin;
 
     private boolean allowSelfRegistration;
+    private boolean autoRegistration;
     private int port;
     private List<String> globalIpWhitelist;
     private int queueExpiryHours;
@@ -34,6 +35,7 @@ public class ConfigManager {
         FileConfiguration config = plugin.getConfig();
 
         this.allowSelfRegistration = config.getBoolean("allow-self-registration", false);
+        this.autoRegistration = config.getBoolean("auto-registration", false);
         this.port = config.getInt("port", 4161);
         this.globalIpWhitelist = config.getStringList("global-ip-whitelist");
         if (this.globalIpWhitelist == null) {
@@ -47,6 +49,11 @@ public class ConfigManager {
 
     public boolean isAllowSelfRegistration() {
         return allowSelfRegistration;
+    }
+
+    public boolean isAutoRegistration() {
+        // allow-self-registrationがtrueでないと無効
+        return allowSelfRegistration && autoRegistration;
     }
 
     public int getPort() {

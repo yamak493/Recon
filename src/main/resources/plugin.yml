@@ -15,7 +15,7 @@ commands:
 permissions:
   recon.create.own:
     description: Create own connection profile
-    default: true
+    default: op
   recon.create.own.ip-whitelist:
     description: Set IP whitelist for own profile
     default: op
@@ -42,10 +42,10 @@ permissions:
     default: op
   recon.edit.own.password:
     description: Edit own password
-    default: true
+    default: op
   recon.edit.own.ip-whitelist:
     description: Edit own IP whitelist
-    default: true
+    default: op
   recon.edit.own.op:
     description: Edit own OP flag
     default: op

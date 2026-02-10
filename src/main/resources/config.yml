@@ -4,6 +4,11 @@
 # When true, any player can use "/recon create" to register themselves
 allow-self-registration: false
 
+# Whether to automatically create connection profiles for players on join
+# This requires allow-self-registration to be true.
+# The user name will be the player name, and a random password will be generated.
+auto-registration: false
+
 # HTTP server port
 port: 4161
 
