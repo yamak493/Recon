@@ -1,0 +1,84 @@
+name: Recon
+version: '${project.version}'
+main: net.enabify.recon.Recon
+api-version: '1.13'
+description: Reliable REST API alternative to Minecraft RCON
+author: Enabify
+folia-supported: true
+
+commands:
+  recon:
+    description: Recon management command
+    usage: /recon <create|edit|info|test|reload|remove>
+    aliases: []
+
+permissions:
+  recon.create.own:
+    description: Create own connection profile
+    default: true
+  recon.create.own.ip-whitelist:
+    description: Set IP whitelist for own profile
+    default: op
+  recon.create.own.op:
+    description: Set OP flag for own profile
+    default: op
+  recon.create.own.group:
+    description: Set permission group for own profile
+    default: op
+  recon.create.other.user:
+    description: Create connection profile for another user
+    default: op
+  recon.create.other.ip-whitelist:
+    description: Set IP whitelist for another user
+    default: op
+  recon.create.other.op:
+    description: Set OP flag for another user
+    default: op
+  recon.create.other.player:
+    description: Set player for another user
+    default: op
+  recon.create.other.group:
+    description: Set permission group for another user
+    default: op
+  recon.edit.own.password:
+    description: Edit own password
+    default: true
+  recon.edit.own.ip-whitelist:
+    description: Edit own IP whitelist
+    default: true
+  recon.edit.own.op:
+    description: Edit own OP flag
+    default: op
+  recon.edit.own.group:
+    description: Edit own permission group
+    default: op
+  recon.edit.other.password:
+    description: Edit another user's password
+    default: op
+  recon.edit.other.ip-whitelist:
+    description: Edit another user's IP whitelist
+    default: op
+  recon.edit.other.player:
+    description: Edit another user's player
+    default: op
+  recon.edit.other.user:
+    description: Edit another user's username
+    default: op
+  recon.edit.other.group:
+    description: Edit another user's permission group
+    default: op
+  recon.edit.other.op:
+    description: Edit another user's OP flag
+    default: op
+  recon.info.own:
+    description: View own connection profile
+    default: true
+  recon.info.other:
+    description: View another user's connection profile
+    default: op
+  recon.reload:
+    description: Reload configuration files
+    default: op
+  recon.remove:
+    description: Remove a user connection profile
+    default: op

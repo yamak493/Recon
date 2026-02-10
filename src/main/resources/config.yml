@@ -1,0 +1,19 @@
+# Recon Configuration
+
+# Whether players can register their own connection profiles
+# When true, any player can use "/recon create" to register themselves
+allow-self-registration: false
+
+# HTTP server port
+port: 4161
+
+# Global IP whitelist (applies to all users)
+# Leave empty to allow all IPs
+global-ip-whitelist: []
+
+# Maximum hours to keep offline player command queues
+# Expired commands are automatically removed (default: 72 hours = 3 days)
+queue-expiry-hours: 72
+
+# Rate limit: maximum requests per minute from the same IP address
+rate-limit: 30
