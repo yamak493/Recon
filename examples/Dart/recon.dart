@@ -19,9 +19,10 @@ import 'package:http/http.dart' as http;
 class ReconResponse {
   final bool success;
   final String? response;
+  final String? plainResponse;
   final String? error;
 
-  ReconResponse({required this.success, this.response, this.error});
+  ReconResponse({required this.success, this.response, this.plainResponse, this.error});
 
   @override
   String toString() {
@@ -93,8 +94,11 @@ class Recon {
         final serverTimestamp = (responseJson['timestamp'] as num?)?.toInt() ?? 0;
         final responseKey = _deriveKey(password, serverNonce, serverTimestamp);
         final decrypted = _decrypt(responseJson['response'] as String, responseKey);
+        final decryptedPlain = responseJson.containsKey('plainResponse')
+            ? _decrypt(responseJson['plainResponse'] as String, responseKey)
+            : decrypted;
 
-        return ReconResponse(success: true, response: decrypted);
+        return ReconResponse(success: true, response: decrypted, plainResponse: decryptedPlain);
       }
 
       return ReconResponse(

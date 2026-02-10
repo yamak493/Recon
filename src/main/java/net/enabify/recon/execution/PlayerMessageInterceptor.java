@@ -126,10 +126,17 @@ public class PlayerMessageInterceptor {
     }
 
     /**
-     * キャプチャされたメッセージを結合して返す
+     * キャプチャされたメッセージを結合して返す（装飾コード付き）
      */
     public String getOutput() {
         return String.join("\n", capturedMessages);
+    }
+
+    /**
+     * キャプチャされたメッセージを結合して返す（装飾コード無し）
+     */
+    public String getPlainOutput() {
+        return String.join("\n", capturedMessages).replaceAll("\u00a7[0-9a-fk-or]", "");
     }
 
     // ==========================================
@@ -306,7 +313,8 @@ public class PlayerMessageInterceptor {
             try {
                 Object result = fromComponentMethod.invoke(null, component);
                 if (result instanceof String) {
-                    return cleanColorCodes((String) result);
+                    // 装飾コード付きのまま返す
+                    return (String) result;
                 }
             } catch (Exception ignored) {
             }

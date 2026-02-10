@@ -26,6 +26,7 @@ public class Example {
         if (response.isSuccess()) {
             System.out.println("Connection successful!");
             System.out.println("Response: " + response.getResponse());
+            System.out.println("Plain Response: " + response.getPlainResponse());
         } else {
             System.out.println("Connection failed!");
             System.out.println("Error: " + response.getError());

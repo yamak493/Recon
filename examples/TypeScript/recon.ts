@@ -15,6 +15,7 @@ import * as https from 'https';
 export interface ReconResponse {
     success: boolean;
     response: string | null;
+    plainResponse: string | null;
     error: string | null;
 }
 
@@ -95,19 +96,24 @@ export class Recon {
                 const serverTimestamp: number = responseJson.timestamp || 0;
                 const responseKey = this.deriveKey(this.password, serverNonce, serverTimestamp);
                 const decrypted = this.decrypt(responseJson.response, responseKey);
+                const decryptedPlain = responseJson.plainResponse
+                    ? this.decrypt(responseJson.plainResponse, responseKey)
+                    : decrypted;
 
-                return { success: true, response: decrypted, error: null };
+                return { success: true, response: decrypted, plainResponse: decryptedPlain, error: null };
             }
 
             return {
                 success: false,
                 response: null,
+                plainResponse: null,
                 error: responseJson.error || 'Unknown error',
             };
         } catch (err: any) {
             return {
                 success: false,
                 response: null,
+                plainResponse: null,
                 error: `Connection error: ${err.message}`,
             };
         }

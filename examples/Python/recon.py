@@ -58,7 +58,7 @@ class Recon:
             queue:   Whether to queue the command if the player is offline
 
         Returns:
-            dict with 'success' (bool), 'response' (str or None), 'error' (str or None)
+            dict with 'success' (bool), 'response' (str or None), 'plainResponse' (str or None), 'error' (str or None)
         """
         nonce = uuid.uuid4().hex
         timestamp = int(time.time())
@@ -94,18 +94,21 @@ class Recon:
                 return {
                     'success': False,
                     'response': None,
+                    'plainResponse': None,
                     'error': error_json.get('error', f'HTTP {e.code}'),
                 }
             except Exception:
                 return {
                     'success': False,
                     'response': None,
+                    'plainResponse': None,
                     'error': f'HTTP error {e.code}',
                 }
         except URLError as e:
             return {
                 'success': False,
                 'response': None,
+                'plainResponse': None,
                 'error': f'Connection failed: {e.reason}',
             }
 
@@ -115,6 +118,7 @@ class Recon:
             return {
                 'success': False,
                 'response': None,
+                'plainResponse': None,
                 'error': 'Invalid JSON response',
             }
 
@@ -124,21 +128,26 @@ class Recon:
                 server_timestamp = response_json.get('timestamp', 0)
                 response_key = self._derive_key(self.password, server_nonce, server_timestamp)
                 decrypted = self._decrypt(response_json['response'], response_key)
+                decrypted_plain = (self._decrypt(response_json['plainResponse'], response_key)
+                                   if 'plainResponse' in response_json else decrypted)
                 return {
                     'success': True,
                     'response': decrypted,
+                    'plainResponse': decrypted_plain,
                     'error': None,
                 }
             except Exception as e:
                 return {
                     'success': False,
                     'response': None,
+                    'plainResponse': None,
                     'error': f'Failed to decrypt response: {e}',
                 }
 
         return {
             'success': False,
             'response': None,
+            'plainResponse': None,
             'error': response_json.get('error', 'Unknown error'),
         }
 

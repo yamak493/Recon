@@ -27,6 +27,7 @@ $response = $recon->sendCommand('recon test', true);
 if ($response['success']) {
     echo "Connection successful!\n";
     echo "Response: " . $response['response'] . "\n";
+    echo "Plain Response: " . $response['plainResponse'] . "\n";
 } else {
     echo "Connection failed!\n";
     echo "Error: " . $response['error'] . "\n";

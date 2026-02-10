@@ -27,6 +27,7 @@ async function main(): Promise<void> {
     if (response.success) {
         console.log('Connection successful!');
         console.log('Response:', response.response);
+        console.log('Plain Response:', response.plainResponse);
     } else {
         console.log('Connection failed!');
         console.log('Error:', response.error);

@@ -46,7 +46,7 @@ class Recon
      *
      * @param string $command The command to execute (without leading /)
      * @param bool   $queue   Whether to queue the command if the player is offline
-     * @return array Response array with 'success', 'response', and optional 'error' keys
+     * @return array Response array with 'success', 'response', 'plainResponse', and optional 'error' keys
      */
     public function sendCommand(string $command, bool $queue = true): array
     {
@@ -114,25 +114,31 @@ class Recon
                 $serverTimestamp = $responseJson['timestamp'] ?? 0;
                 $responseKey = $this->deriveKey($this->password, $serverNonce, $serverTimestamp);
                 $decrypted = $this->decrypt($responseJson['response'], $responseKey);
+                $decryptedPlain = isset($responseJson['plainResponse']) 
+                    ? $this->decrypt($responseJson['plainResponse'], $responseKey)
+                    : $decrypted;
 
                 return [
-                    'success'  => true,
-                    'response' => $decrypted,
-                    'error'    => null,
+                    'success'       => true,
+                    'response'      => $decrypted,
+                    'plainResponse' => $decryptedPlain,
+                    'error'         => null,
                 ];
             } catch (\Exception $e) {
                 return [
-                    'success'  => false,
-                    'response' => null,
-                    'error'    => 'Failed to decrypt response: ' . $e->getMessage(),
+                    'success'       => false,
+                    'response'      => null,
+                    'plainResponse' => null,
+                    'error'         => 'Failed to decrypt response: ' . $e->getMessage(),
                 ];
             }
         }
 
         return [
-            'success'  => $responseJson['success'] ?? false,
-            'response' => null,
-            'error'    => $responseJson['error'] ?? 'Unknown error',
+            'success'       => $responseJson['success'] ?? false,
+            'response'      => null,
+            'plainResponse' => null,
+            'error'         => $responseJson['error'] ?? 'Unknown error',
         ];
     }
 

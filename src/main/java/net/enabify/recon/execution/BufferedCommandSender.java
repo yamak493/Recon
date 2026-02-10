@@ -30,10 +30,17 @@ public class BufferedCommandSender implements ConsoleCommandSender {
     }
 
     /**
-     * キャプチャされたメッセージを結合して返す
+     * キャプチャされたメッセージを結合して返す（装飾コード付き）
      */
     public String getOutput() {
         return String.join("\n", messages);
+    }
+
+    /**
+     * キャプチャされたメッセージを結合して返す（装飾コード無し）
+     */
+    public String getPlainOutput() {
+        return String.join("\n", messages).replaceAll("\u00a7[0-9a-fk-or]", "");
     }
 
     /**

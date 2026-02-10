@@ -34,6 +34,7 @@ Future<void> main() async {
   if (response.success) {
     print('Connection successful!');
     print('Response: ${response.response}');
+    print('Plain Response: ${response.plainResponse}');
   } else {
     print('Connection failed!');
     print('Error: ${response.error}');

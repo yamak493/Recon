@@ -32,9 +32,10 @@ type Recon struct {
 
 // Response represents the result of a command execution.
 type Response struct {
-	Success  bool
-	Response string
-	Error    string
+	Success       bool
+	Response      string
+	PlainResponse string
+	Error         string
 }
 
 // request is the JSON body sent to the server.
@@ -48,12 +49,13 @@ type request struct {
 
 // serverResponse is the JSON body received from the server.
 type serverResponse struct {
-	User      string `json:"user"`
-	Nonce     string `json:"nonce"`
-	Timestamp int64  `json:"timestamp"`
-	Success   bool   `json:"success"`
-	Response  string `json:"response"`
-	Error     string `json:"error"`
+	User          string `json:"user"`
+	Nonce         string `json:"nonce"`
+	Timestamp     int64  `json:"timestamp"`
+	Success       bool   `json:"success"`
+	Response      string `json:"response"`
+	PlainResponse string `json:"plainResponse"`
+	Error         string `json:"error"`
 }
 
 // NewRecon creates a new Recon client instance.
@@ -123,7 +125,13 @@ func (r *Recon) SendCommand(command string, queue bool) Response {
 		if err != nil {
 			return Response{Success: false, Error: fmt.Sprintf("Decrypt error: %v", err)}
 		}
-		return Response{Success: true, Response: decrypted}
+		decryptedPlain := decrypted
+		if srvResp.PlainResponse != "" {
+			if plain, err := decrypt(srvResp.PlainResponse, responseKey); err == nil {
+				decryptedPlain = plain
+			}
+		}
+		return Response{Success: true, Response: decrypted, PlainResponse: decryptedPlain}
 	}
 
 	errMsg := srvResp.Error

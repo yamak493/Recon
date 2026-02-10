@@ -194,12 +194,15 @@ public class ReconHttpServer {
                 String serverNonce = UUID.randomUUID().toString().replace("-", "");
                 long serverTimestamp = System.currentTimeMillis() / 1000L;
                 String responseText = result.response != null ? result.response : "";
+                String plainResponseText = result.plainResponse != null ? result.plainResponse : "";
 
                 String encryptedResponse;
+                String encryptedPlainResponse;
                 try {
                     byte[] responseKey = AESCrypto.deriveKey(
                             reconUser.getPassword(), serverNonce, serverTimestamp);
                     encryptedResponse = AESCrypto.encrypt(responseText, responseKey);
+                    encryptedPlainResponse = AESCrypto.encrypt(plainResponseText, responseKey);
                 } catch (Exception e) {
                     sendErrorResponse(exchange, 500, "Failed to encrypt response.");
                     return;
@@ -212,6 +215,7 @@ public class ReconHttpServer {
                 responseJson.addProperty("timestamp", serverTimestamp);
                 responseJson.addProperty("success", result.success);
                 responseJson.addProperty("response", encryptedResponse);
+                responseJson.addProperty("plainResponse", encryptedPlainResponse);
                 if (!result.success && result.error != null) {
                     responseJson.addProperty("error", result.error);
                 }

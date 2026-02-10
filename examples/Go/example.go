@@ -29,6 +29,7 @@ func main() {
 	if response.Success {
 		fmt.Println("Connection successful!")
 		fmt.Printf("Response: %s\n", response.Response)
+		fmt.Printf("Plain Response: %s\n", response.PlainResponse)
 	} else {
 		fmt.Println("Connection failed!")
 		fmt.Printf("Error: %s\n", response.Error)

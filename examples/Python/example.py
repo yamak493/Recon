@@ -27,6 +27,7 @@ response = recon.send_command('recon test', queue=True)
 if response['success']:
     print('Connection successful!')
     print(f"Response: {response['response']}")
+    print(f"Plain Response: {response['plainResponse']}")
 else:
     print('Connection failed!')
     print(f"Error: {response['error']}")

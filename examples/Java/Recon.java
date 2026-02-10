@@ -111,17 +111,21 @@ public class Recon {
                 String serverNonce = extractJsonValue(responseBody, "nonce");
                 long serverTimestamp = extractJsonLong(responseBody, "timestamp");
                 String encryptedResponse = extractJsonValue(responseBody, "response");
+                String encryptedPlainResponse = extractJsonValue(responseBody, "plainResponse");
 
                 byte[] responseKey = deriveKey(password, serverNonce, serverTimestamp);
                 String decrypted = decrypt(encryptedResponse, responseKey);
+                String decryptedPlain = encryptedPlainResponse != null 
+                    ? decrypt(encryptedPlainResponse, responseKey)
+                    : decrypted;
 
-                return new ReconResponse(true, decrypted, null);
+                return new ReconResponse(true, decrypted, decryptedPlain, null);
             }
 
-            return new ReconResponse(false, null, error != null ? error : "Request failed (HTTP " + httpCode + ")");
+            return new ReconResponse(false, null, null, error != null ? error : "Request failed (HTTP " + httpCode + ")");
 
         } catch (Exception e) {
-            return new ReconResponse(false, null, "Connection error: " + e.getMessage());
+            return new ReconResponse(false, null, null, "Connection error: " + e.getMessage());
         }
     }
 
@@ -198,16 +202,19 @@ public class Recon {
     public static class ReconResponse {
         private final boolean success;
         private final String response;
+        private final String plainResponse;
         private final String error;
 
-        public ReconResponse(boolean success, String response, String error) {
+        public ReconResponse(boolean success, String response, String plainResponse, String error) {
             this.success = success;
             this.response = response;
+            this.plainResponse = plainResponse;
             this.error = error;
         }
 
         public boolean isSuccess() { return success; }
         public String getResponse() { return response; }
+        public String getPlainResponse() { return plainResponse; }
         public String getError() { return error; }
 
         @Override

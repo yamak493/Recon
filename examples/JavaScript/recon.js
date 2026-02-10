@@ -37,7 +37,7 @@ class Recon {
      *
      * @param {string}  command - The command to execute (without leading /)
      * @param {boolean} queue   - Whether to queue the command if the player is offline
-     * @returns {Promise<{success: boolean, response: string|null, error: string|null}>}
+     * @returns {Promise<{success: boolean, response: string|null, plainResponse: string|null, error: string|null}>}
      */
     async sendCommand(command, queue = true) {
         try {
@@ -66,19 +66,24 @@ class Recon {
                 const serverTimestamp = responseJson.timestamp || 0;
                 const responseKey = this._deriveKey(this.password, serverNonce, serverTimestamp);
                 const decrypted = this._decrypt(responseJson.response, responseKey);
+                const decryptedPlain = responseJson.plainResponse 
+                    ? this._decrypt(responseJson.plainResponse, responseKey)
+                    : decrypted;
 
-                return { success: true, response: decrypted, error: null };
+                return { success: true, response: decrypted, plainResponse: decryptedPlain, error: null };
             }
 
             return {
                 success: false,
                 response: null,
+                plainResponse: null,
                 error: responseJson.error || 'Unknown error',
             };
         } catch (err) {
             return {
                 success: false,
                 response: null,
+                plainResponse: null,
                 error: `Connection error: ${err.message}`,
             };
         }
