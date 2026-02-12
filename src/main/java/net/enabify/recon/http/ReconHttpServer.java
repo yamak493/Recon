@@ -64,20 +64,20 @@ public class ReconHttpServer {
             try {
                 // POSTメソッドのみ受付
                 if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-                    sendErrorResponse(exchange, 404, "Only POST requests to / are accepted.");
+                    sendErrorResponse(exchange, 404, plugin.getLangManager().get("http.only_post"));
                     return;
                 }
 
                 // パスチェック（ルート直下のみ）
                 String path = exchange.getRequestURI().getPath();
                 if (!"/".equals(path)) {
-                    sendErrorResponse(exchange, 404, "Only root endpoint (/) is supported.");
+                    sendErrorResponse(exchange, 404, plugin.getLangManager().get("http.only_root"));
                     return;
                 }
 
                 // レート制限チェック
                 if (!plugin.getRateLimiter().allowRequest(clientIp)) {
-                    sendErrorResponse(exchange, 429, "Rate limit exceeded. Please try again later.");
+                    sendErrorResponse(exchange, 429, plugin.getLangManager().get("http.rate_limited"));
                     return;
                 }
 
@@ -89,7 +89,7 @@ public class ReconHttpServer {
                 try {
                     requestJson = new JsonParser().parse(body).getAsJsonObject();
                 } catch (Exception e) {
-                    sendErrorResponse(exchange, 400, "Invalid JSON format.");
+                    sendErrorResponse(exchange, 400, plugin.getLangManager().get("http.invalid_json"));
                     return;
                 }
 
@@ -97,7 +97,7 @@ public class ReconHttpServer {
                 if (!requestJson.has("user") || !requestJson.has("nonce") ||
                         !requestJson.has("timestamp") || !requestJson.has("command")) {
                     sendErrorResponse(exchange, 400,
-                            "Missing required fields: user, nonce, timestamp, command");
+                        plugin.getLangManager().get("http.missing_required_fields"));
                     return;
                 }
 
@@ -111,7 +111,7 @@ public class ReconHttpServer {
                 ReconUser reconUser = plugin.getUserManager().getUser(userName);
                 if (reconUser == null) {
                     plugin.getReconLogger().logApiRequest(clientIp, userName, "(unknown)", false);
-                    sendErrorResponse(exchange, 401, "Authentication failed. User not found.");
+                    sendErrorResponse(exchange, 401, plugin.getLangManager().get("http.auth_user_not_found"));
                     return;
                 }
 
@@ -121,7 +121,7 @@ public class ReconHttpServer {
                     if (!globalWhitelist.contains(clientIp)) {
                         plugin.getReconLogger().logApiRequest(clientIp, userName, "(blocked)", false);
                         sendErrorResponse(exchange, 403,
-                                "IP address not in global whitelist.");
+                                plugin.getLangManager().get("http.ip_not_whitelisted_global"));
                         return;
                     }
                 }
@@ -132,7 +132,7 @@ public class ReconHttpServer {
                     if (!userWhitelist.contains(clientIp)) {
                         plugin.getReconLogger().logApiRequest(clientIp, userName, "(blocked)", false);
                         sendErrorResponse(exchange, 403,
-                                "IP address not in user whitelist.");
+                                plugin.getLangManager().get("http.ip_not_whitelisted_user"));
                         return;
                     }
                 }
@@ -142,14 +142,14 @@ public class ReconHttpServer {
                 if (Math.abs(now - timestamp) > 60) {
                     plugin.getReconLogger().logApiRequest(clientIp, userName, "(invalid timestamp)", false);
                     sendErrorResponse(exchange, 401,
-                            "Timestamp is out of valid range (must be within 60 seconds).");
+                            plugin.getLangManager().get("http.timestamp_out_of_range"));
                     return;
                 }
 
                 // nonce検証（同一nonceの再利用防止）
                 if (!plugin.getNonceTracker().useNonce(nonce)) {
                     plugin.getReconLogger().logApiRequest(clientIp, userName, "(duplicate nonce)", false);
-                    sendErrorResponse(exchange, 401, "Nonce has already been used.");
+                    sendErrorResponse(exchange, 401, plugin.getLangManager().get("http.nonce_used"));
                     return;
                 }
 
@@ -161,7 +161,7 @@ public class ReconHttpServer {
                 } catch (Exception e) {
                     plugin.getReconLogger().logApiRequest(clientIp, userName, "(decrypt failed)", false);
                     sendErrorResponse(exchange, 401,
-                            "Failed to decrypt command. Authentication failed.");
+                            plugin.getLangManager().get("http.decrypt_failed"));
                     return;
                 }
 
@@ -169,7 +169,7 @@ public class ReconHttpServer {
                 if (!decryptedCommand.startsWith("RCON_")) {
                     plugin.getReconLogger().logApiRequest(clientIp, userName, "(invalid prefix)", false);
                     sendErrorResponse(exchange, 401,
-                            "Invalid command format. Authentication failed.");
+                            plugin.getLangManager().get("http.invalid_command_format"));
                     return;
                 }
 
@@ -186,7 +186,7 @@ public class ReconHttpServer {
                 } catch (Exception e) {
                     plugin.getLogger().severe("Error executing command: " + e.getMessage());
                     sendErrorResponse(exchange, 500,
-                            "An internal error occurred while executing the command.");
+                            plugin.getLangManager().get("http.execute_error"));
                     return;
                 }
 
@@ -204,7 +204,7 @@ public class ReconHttpServer {
                     encryptedResponse = AESCrypto.encrypt(responseText, responseKey);
                     encryptedPlainResponse = AESCrypto.encrypt(plainResponseText, responseKey);
                 } catch (Exception e) {
-                    sendErrorResponse(exchange, 500, "Failed to encrypt response.");
+                    sendErrorResponse(exchange, 500, plugin.getLangManager().get("http.encrypt_failed"));
                     return;
                 }
 
@@ -225,7 +225,7 @@ public class ReconHttpServer {
             } catch (Exception e) {
                 plugin.getLogger().severe("Unexpected error in HTTP handler: " + e.getMessage());
                 try {
-                    sendErrorResponse(exchange, 500, "An unexpected internal error occurred.");
+                    sendErrorResponse(exchange, 500, plugin.getLangManager().get("http.unexpected_error"));
                 } catch (IOException ignored) {
                     // レスポンス送信が既に失敗している場合
                 }

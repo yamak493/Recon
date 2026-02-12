@@ -20,6 +20,7 @@ public class ConfigManager {
     private List<String> globalIpWhitelist;
     private int queueExpiryHours;
     private int rateLimit;
+    private String language;
 
     public ConfigManager(Recon plugin) {
         this.plugin = plugin;
@@ -43,6 +44,7 @@ public class ConfigManager {
         }
         this.queueExpiryHours = config.getInt("queue-expiry-hours", 72);
         this.rateLimit = config.getInt("rate-limit", 30);
+        this.language = config.getString("language", "en");
     }
 
     // --- Getters ---
@@ -70,5 +72,9 @@ public class ConfigManager {
 
     public int getRateLimit() {
         return rateLimit;
+    }
+
+    public String getLanguage() {
+        return language;
     }
 }

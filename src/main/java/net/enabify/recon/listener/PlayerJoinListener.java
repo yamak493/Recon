@@ -91,10 +91,12 @@ public class PlayerJoinListener implements Listener {
         plugin.getLogger().info("Automatically created Recon profile for player: " + playerName);
 
         // プレイヤーに通知
-        player.sendMessage("§b[Recon] §aThe Recon user was created automatically.");
-        player.sendMessage("§b[Recon] §7Username: §f" + playerName);
-        player.sendMessage("§b[Recon] §7Password: §f" + password);
-        player.sendMessage("§b[Recon] §cThis password will only be shown once. Please keep it safe.");
-        player.sendMessage("§b[Recon] §7To change the password, use §f/recon edit pw:<password>§7.");
+        player.sendMessage(plugin.getLangManager().get("auto_registration.created"));
+        player.sendMessage(plugin.getLangManager().format("auto_registration.username",
+            java.util.Collections.singletonMap("username", playerName)));
+        player.sendMessage(plugin.getLangManager().format("auto_registration.password",
+            java.util.Collections.singletonMap("password", password)));
+        player.sendMessage(plugin.getLangManager().get("auto_registration.password_once"));
+        player.sendMessage(plugin.getLangManager().get("auto_registration.change_password"));
     }
 }

@@ -22,3 +22,7 @@ queue-expiry-hours: 72
 
 # Rate limit: maximum requests per minute from the same IP address
 rate-limit: 30
+
+# Language code for messages
+# Supported: en, hi, zh, es, ar, fr, ru, pt, id, de, ja
+language: en

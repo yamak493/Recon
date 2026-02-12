@@ -2,7 +2,6 @@ package net.enabify.recon.command;
 
 import net.enabify.recon.Recon;
 import net.enabify.recon.model.ReconUser;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -93,7 +92,7 @@ public class ReconCommand implements CommandExecutor {
     private void handleCreateOther(CommandSender sender, Map<String, String> params) {
         // 権限チェック
         if (!sender.hasPermission("recon.create.other.user")) {
-            sender.sendMessage(ChatColor.RED + "You don't have permission to create profiles for other users.");
+            sender.sendMessage(tr("error.no_permission.create_other_user"));
             return;
         }
 
@@ -101,12 +100,12 @@ public class ReconCommand implements CommandExecutor {
         String password = params.get("password");
 
         if (password == null || password.isEmpty()) {
-            sender.sendMessage(ChatColor.RED + "Password is required. Usage: /recon create u:<user> pw:<password>");
+            sender.sendMessage(tr("error.password_required_create_other"));
             return;
         }
 
         if (plugin.getUserManager().userExists(userName)) {
-            sender.sendMessage(ChatColor.RED + "User '" + userName + "' already exists. Use /recon edit to modify.");
+            sender.sendMessage(tr("error.user_exists", Collections.singletonMap("username", userName)));
             return;
         }
 
@@ -115,7 +114,7 @@ public class ReconCommand implements CommandExecutor {
         // IP ホワイトリスト
         if (params.containsKey("ip")) {
             if (!sender.hasPermission("recon.create.other.ip-whitelist")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to set IP whitelist.");
+                sender.sendMessage(tr("error.no_permission.ip_whitelist"));
                 return;
             }
             user.setIpWhitelist(parseCommaSeparated(params.get("ip")));
@@ -124,7 +123,7 @@ public class ReconCommand implements CommandExecutor {
         // OP権限
         if (params.containsKey("op")) {
             if (!sender.hasPermission("recon.create.other.op")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to set OP flag.");
+                sender.sendMessage(tr("error.no_permission.op_flag"));
                 return;
             }
             user.setOp(Boolean.parseBoolean(params.get("op")));
@@ -133,7 +132,7 @@ public class ReconCommand implements CommandExecutor {
         // プレイヤー
         if (params.containsKey("player")) {
             if (!sender.hasPermission("recon.create.other.player")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to set player.");
+                sender.sendMessage(tr("error.no_permission.player"));
                 return;
             }
             user.setPlayer(params.get("player"));
@@ -142,7 +141,7 @@ public class ReconCommand implements CommandExecutor {
         // パーミッション
         if (params.containsKey("permission")) {
             if (!sender.hasPermission("recon.create.other.group")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to set permissions.");
+                sender.sendMessage(tr("error.no_permission.permissions"));
                 return;
             }
             user.setPermissions(parseCommaSeparated(params.get("permission")));
@@ -151,7 +150,7 @@ public class ReconCommand implements CommandExecutor {
         plugin.getUserManager().addUser(user);
         plugin.getReconLogger().logCommandExecution(sender.getName(),
                 "create other user: " + userName);
-        sender.sendMessage(ChatColor.GREEN + "User profile '" + userName + "' created successfully.");
+        sender.sendMessage(tr("success.user_profile_created", Collections.singletonMap("username", userName)));
     }
 
     /**
@@ -160,26 +159,26 @@ public class ReconCommand implements CommandExecutor {
     private void handleCreateOwn(CommandSender sender, Map<String, String> params) {
         // プレイヤーチェック（コンソールからは自分自身を作れない）
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "This command can only be executed by a player. Use user: parameter for console.");
+            sender.sendMessage(tr("error.player_only_use_user_param"));
             return;
         }
 
         // 自己登録が許可されているかチェック
         if (!plugin.getConfigManager().isAllowSelfRegistration()) {
             if (!sender.hasPermission("recon.create.own")) {
-                sender.sendMessage(ChatColor.RED + "Self-registration is disabled on this server.");
+                sender.sendMessage(tr("error.self_registration_disabled"));
                 return;
             }
         }
 
         if (!sender.hasPermission("recon.create.own")) {
-            sender.sendMessage(ChatColor.RED + "You don't have permission to create your own profile.");
+            sender.sendMessage(tr("error.no_permission.create_own"));
             return;
         }
 
         String password = params.get("password");
         if (password == null || password.isEmpty()) {
-            sender.sendMessage(ChatColor.RED + "Password is required. Usage: /recon create pw:<password>");
+            sender.sendMessage(tr("error.password_required_create_own"));
             return;
         }
 
@@ -188,7 +187,7 @@ public class ReconCommand implements CommandExecutor {
 
         // 既に自身のプロファイルがあるか確認
         if (plugin.getUserManager().userExists(playerName)) {
-            sender.sendMessage(ChatColor.RED + "Your profile already exists. Use /recon edit to modify.");
+            sender.sendMessage(tr("error.profile_exists"));
             return;
         }
 
@@ -198,7 +197,7 @@ public class ReconCommand implements CommandExecutor {
         // IP ホワイトリスト
         if (params.containsKey("ip")) {
             if (!sender.hasPermission("recon.create.own.ip-whitelist")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to set IP whitelist.");
+                sender.sendMessage(tr("error.no_permission.ip_whitelist"));
                 return;
             }
             user.setIpWhitelist(parseCommaSeparated(params.get("ip")));
@@ -207,7 +206,7 @@ public class ReconCommand implements CommandExecutor {
         // OP権限
         if (params.containsKey("op")) {
             if (!sender.hasPermission("recon.create.own.op")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to set OP flag.");
+                sender.sendMessage(tr("error.no_permission.op_flag"));
                 return;
             }
             user.setOp(Boolean.parseBoolean(params.get("op")));
@@ -216,7 +215,7 @@ public class ReconCommand implements CommandExecutor {
         // パーミッション
         if (params.containsKey("permission")) {
             if (!sender.hasPermission("recon.create.own.group")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to set permissions.");
+                sender.sendMessage(tr("error.no_permission.permissions"));
                 return;
             }
             user.setPermissions(parseCommaSeparated(params.get("permission")));
@@ -224,7 +223,7 @@ public class ReconCommand implements CommandExecutor {
 
         plugin.getUserManager().addUser(user);
         plugin.getReconLogger().logCommandExecution(sender.getName(), "create own profile");
-        sender.sendMessage(ChatColor.GREEN + "Your connection profile created successfully.");
+        sender.sendMessage(tr("success.profile_created"));
     }
 
     // ============================
@@ -250,7 +249,7 @@ public class ReconCommand implements CommandExecutor {
 
         ReconUser user = plugin.getUserManager().getUser(userName);
         if (user == null) {
-            sender.sendMessage(ChatColor.RED + "User '" + userName + "' not found.");
+            sender.sendMessage(tr("error.user_not_found", Collections.singletonMap("username", userName)));
             return;
         }
 
@@ -259,7 +258,7 @@ public class ReconCommand implements CommandExecutor {
         // パスワード
         if (params.containsKey("password")) {
             if (!sender.hasPermission("recon.edit.other.password")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit other user's password.");
+                sender.sendMessage(tr("error.no_permission.edit_other_password"));
                 return;
             }
             user.setPassword(params.get("password"));
@@ -269,7 +268,7 @@ public class ReconCommand implements CommandExecutor {
         // IPホワイトリスト（+/-で追加・削除）
         if (params.containsKey("ip")) {
             if (!sender.hasPermission("recon.edit.other.ip-whitelist")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit other user's IP whitelist.");
+                sender.sendMessage(tr("error.no_permission.edit_other_ip_whitelist"));
                 return;
             }
             applyListModifications(user.getIpWhitelist(), params.get("ip"));
@@ -279,7 +278,7 @@ public class ReconCommand implements CommandExecutor {
         // OP権限
         if (params.containsKey("op")) {
             if (!sender.hasPermission("recon.edit.other.op")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit other user's OP flag.");
+                sender.sendMessage(tr("error.no_permission.edit_other_op_flag"));
                 return;
             }
             user.setOp(Boolean.parseBoolean(params.get("op")));
@@ -289,7 +288,7 @@ public class ReconCommand implements CommandExecutor {
         // プレイヤー
         if (params.containsKey("player")) {
             if (!sender.hasPermission("recon.edit.other.player")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit other user's player.");
+                sender.sendMessage(tr("error.no_permission.edit_other_player"));
                 return;
             }
             user.setPlayer(params.get("player"));
@@ -299,7 +298,7 @@ public class ReconCommand implements CommandExecutor {
         // パーミッション（+/-で追加・削除）
         if (params.containsKey("permission")) {
             if (!sender.hasPermission("recon.edit.other.group")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit other user's permissions.");
+                sender.sendMessage(tr("error.no_permission.edit_other_permissions"));
                 return;
             }
             applyListModifications(user.getPermissions(), params.get("permission"));
@@ -310,9 +309,9 @@ public class ReconCommand implements CommandExecutor {
             plugin.getUserManager().addUser(user);
             plugin.getReconLogger().logCommandExecution(sender.getName(),
                     "edit other user: " + userName);
-            sender.sendMessage(ChatColor.GREEN + "User profile '" + userName + "' updated successfully.");
+            sender.sendMessage(tr("success.user_profile_updated", Collections.singletonMap("username", userName)));
         } else {
-            sender.sendMessage(ChatColor.YELLOW + "No changes specified.");
+            sender.sendMessage(tr("info.no_changes"));
         }
     }
 
@@ -321,7 +320,7 @@ public class ReconCommand implements CommandExecutor {
      */
     private void handleEditOwn(CommandSender sender, Map<String, String> params) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + "This command can only be executed by a player. Use user: parameter for console.");
+            sender.sendMessage(tr("error.player_only_use_user_param"));
             return;
         }
 
@@ -333,7 +332,7 @@ public class ReconCommand implements CommandExecutor {
             // プレイヤー名でユーザーが見つからない場合、player フィールドで検索
             user = plugin.getUserManager().findByPlayer(playerName);
             if (user == null) {
-                sender.sendMessage(ChatColor.RED + "You don't have a profile. Use /recon create first.");
+                sender.sendMessage(tr("error.no_profile"));
                 return;
             }
         }
@@ -343,7 +342,7 @@ public class ReconCommand implements CommandExecutor {
         // パスワード
         if (params.containsKey("password")) {
             if (!sender.hasPermission("recon.edit.own.password")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit your password.");
+                sender.sendMessage(tr("error.no_permission.edit_own_password"));
                 return;
             }
             user.setPassword(params.get("password"));
@@ -353,7 +352,7 @@ public class ReconCommand implements CommandExecutor {
         // IPホワイトリスト（+/-で追加・削除）
         if (params.containsKey("ip")) {
             if (!sender.hasPermission("recon.edit.own.ip-whitelist")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit your IP whitelist.");
+                sender.sendMessage(tr("error.no_permission.edit_own_ip_whitelist"));
                 return;
             }
             applyListModifications(user.getIpWhitelist(), params.get("ip"));
@@ -363,7 +362,7 @@ public class ReconCommand implements CommandExecutor {
         // OP権限
         if (params.containsKey("op")) {
             if (!sender.hasPermission("recon.edit.own.op")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit your OP flag.");
+                sender.sendMessage(tr("error.no_permission.edit_own_op_flag"));
                 return;
             }
             user.setOp(Boolean.parseBoolean(params.get("op")));
@@ -373,7 +372,7 @@ public class ReconCommand implements CommandExecutor {
         // パーミッション（+/-で追加・削除）
         if (params.containsKey("permission")) {
             if (!sender.hasPermission("recon.edit.own.group")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to edit your permissions.");
+                sender.sendMessage(tr("error.no_permission.edit_own_permissions"));
                 return;
             }
             applyListModifications(user.getPermissions(), params.get("permission"));
@@ -383,9 +382,9 @@ public class ReconCommand implements CommandExecutor {
         if (changed) {
             plugin.getUserManager().addUser(user);
             plugin.getReconLogger().logCommandExecution(sender.getName(), "edit own profile");
-            sender.sendMessage(ChatColor.GREEN + "Your profile updated successfully.");
+            sender.sendMessage(tr("success.profile_updated"));
         } else {
-            sender.sendMessage(ChatColor.YELLOW + "No changes specified.");
+            sender.sendMessage(tr("info.no_changes"));
         }
     }
 
@@ -398,26 +397,26 @@ public class ReconCommand implements CommandExecutor {
         if (params.containsKey("user")) {
             // 他ユーザーの情報表示
             if (!sender.hasPermission("recon.info.other")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to view other user's profile.");
+                sender.sendMessage(tr("error.no_permission.info_other"));
                 return;
             }
 
             String userName = params.get("user");
             ReconUser user = plugin.getUserManager().getUser(userName);
             if (user == null) {
-                sender.sendMessage(ChatColor.RED + "User '" + userName + "' not found.");
+                sender.sendMessage(tr("error.user_not_found", Collections.singletonMap("username", userName)));
                 return;
             }
             displayUserInfo(sender, user);
         } else {
             // 自身の情報表示
             if (!(sender instanceof Player)) {
-                sender.sendMessage(ChatColor.RED + "Specify a user: /recon info u:<username>");
+                sender.sendMessage(tr("error.specify_user"));
                 return;
             }
 
             if (!sender.hasPermission("recon.info.own")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to view your profile.");
+                sender.sendMessage(tr("error.no_permission.info_own"));
                 return;
             }
 
@@ -427,7 +426,7 @@ public class ReconCommand implements CommandExecutor {
                 user = plugin.getUserManager().findByPlayer(player.getName());
             }
             if (user == null) {
-                sender.sendMessage(ChatColor.RED + "You don't have a profile. Use /recon create first.");
+                sender.sendMessage(tr("error.no_profile"));
                 return;
             }
             displayUserInfo(sender, user);
@@ -438,27 +437,33 @@ public class ReconCommand implements CommandExecutor {
      * ユーザー情報を表示する
      */
     private void displayUserInfo(CommandSender sender, ReconUser user) {
-        sender.sendMessage(ChatColor.GOLD + "==============================");
-        sender.sendMessage(ChatColor.AQUA + "  User: " + ChatColor.WHITE + user.getUser());
-        sender.sendMessage(ChatColor.AQUA + "  Password: " + ChatColor.GRAY + "********");
-        sender.sendMessage(ChatColor.AQUA + "  Player: " + ChatColor.WHITE +
-                (user.getPlayer() != null ? user.getPlayer() : "(console)"));
-        sender.sendMessage(ChatColor.AQUA + "  OP: " + ChatColor.WHITE + user.isOp());
-        sender.sendMessage(ChatColor.AQUA + "  IP Whitelist: " + ChatColor.WHITE +
-                (user.getIpWhitelist().isEmpty() ? "(none)" : String.join(", ", user.getIpWhitelist())));
-        sender.sendMessage(ChatColor.AQUA + "  Permissions: " + ChatColor.WHITE +
-                (user.getPermissions().isEmpty() ? "(none)" : String.join(", ", user.getPermissions())));
-        sender.sendMessage(ChatColor.GOLD + "==============================");
+        String playerValue = user.getPlayer() != null ? user.getPlayer() : tr("info.player_console");
+        String ipValue = user.getIpWhitelist().isEmpty()
+            ? tr("info.none")
+            : String.join(", ", user.getIpWhitelist());
+        String permValue = user.getPermissions().isEmpty()
+            ? tr("info.none")
+            : String.join(", ", user.getPermissions());
+        String opValue = user.isOp() ? tr("bool.true") : tr("bool.false");
+
+        sender.sendMessage(tr("info.header"));
+        sender.sendMessage(tr("info.user", Collections.singletonMap("username", user.getUser())));
+        sender.sendMessage(tr("info.password"));
+        sender.sendMessage(tr("info.player", Collections.singletonMap("player", playerValue)));
+        sender.sendMessage(tr("info.op", Collections.singletonMap("op", opValue)));
+        sender.sendMessage(tr("info.ip_whitelist", Collections.singletonMap("ips", ipValue)));
+        sender.sendMessage(tr("info.permissions", Collections.singletonMap("permissions", permValue)));
+        sender.sendMessage(tr("info.footer"));
     }
 
     // ============================
     // /recon test
     // ============================
     private void handleTest(CommandSender sender) {
-        sender.sendMessage(ChatColor.YELLOW + "==============================");
-        sender.sendMessage(ChatColor.AQUA + "       Welcome to Recon        ");
-        sender.sendMessage(ChatColor.GREEN + "    Successful connection    ");
-        sender.sendMessage(ChatColor.YELLOW + "==============================");
+        sender.sendMessage(tr("test.header"));
+        sender.sendMessage(tr("test.welcome"));
+        sender.sendMessage(tr("test.success"));
+        sender.sendMessage(tr("test.footer"));
     }
 
     // ============================
@@ -466,7 +471,7 @@ public class ReconCommand implements CommandExecutor {
     // ============================
     private void handleReload(CommandSender sender) {
         if (!sender.hasPermission("recon.reload")) {
-            sender.sendMessage(ChatColor.RED + "You don't have permission to reload configuration.");
+            sender.sendMessage(tr("error.no_permission.reload"));
             return;
         }
 
@@ -474,12 +479,14 @@ public class ReconCommand implements CommandExecutor {
             plugin.getConfigManager().loadConfig();
             plugin.getUserManager().loadUsers();
             plugin.getQueueManager().loadQueues();
+            plugin.getLangManager().reload();
 
             plugin.getReconLogger().logCommandExecution(sender.getName(), "reload configuration");
-            sender.sendMessage(ChatColor.GREEN + "Configuration reloaded successfully.");
-            sender.sendMessage(ChatColor.GRAY + "Reloaded: config.yml, users.yml, queues.yml");
+            sender.sendMessage(tr("success.reload"));
+            sender.sendMessage(tr("success.reload_files"));
         } catch (Exception e) {
-            sender.sendMessage(ChatColor.RED + "Failed to reload configuration: " + e.getMessage());
+            sender.sendMessage(tr("error.reload_failed",
+                    Collections.singletonMap("error", e.getMessage())));
             plugin.getLogger().severe("Error reloading configuration: " + e.getMessage());
         }
     }
@@ -489,7 +496,7 @@ public class ReconCommand implements CommandExecutor {
     // ============================
     private void handleRemove(CommandSender sender, String[] args) {
         if (!sender.hasPermission("recon.remove")) {
-            sender.sendMessage(ChatColor.RED + "You don't have permission to remove user profiles.");
+            sender.sendMessage(tr("error.no_permission.remove"));
             return;
         }
 
@@ -497,19 +504,19 @@ public class ReconCommand implements CommandExecutor {
         String userName = params.get("user");
 
         if (userName == null || userName.isEmpty()) {
-            sender.sendMessage(ChatColor.RED + "Username is required. Usage: /recon remove u:<username>");
+            sender.sendMessage(tr("error.username_required"));
             return;
         }
 
         if (!plugin.getUserManager().userExists(userName)) {
-            sender.sendMessage(ChatColor.RED + "User '" + userName + "' not found.");
+            sender.sendMessage(tr("error.user_not_found", Collections.singletonMap("username", userName)));
             return;
         }
 
         plugin.getUserManager().removeUser(userName);
         plugin.getReconLogger().logCommandExecution(sender.getName(),
                 "remove user: " + userName);
-        sender.sendMessage(ChatColor.GREEN + "User profile '" + userName + "' removed successfully.");
+        sender.sendMessage(tr("success.user_removed", Collections.singletonMap("username", userName)));
     }
 
     // ============================
@@ -520,15 +527,23 @@ public class ReconCommand implements CommandExecutor {
      * 使い方を表示
      */
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage(ChatColor.GOLD + "=== Recon Commands ===");
-        sender.sendMessage(ChatColor.YELLOW + "/recon create" + ChatColor.WHITE + " - Create a connection profile");
-        sender.sendMessage(ChatColor.YELLOW + "/recon edit" + ChatColor.WHITE + " - Edit a connection profile");
-        sender.sendMessage(ChatColor.YELLOW + "/recon info" + ChatColor.WHITE + " - View a connection profile");
-        sender.sendMessage(ChatColor.YELLOW + "/recon test" + ChatColor.WHITE + " - Test connection");
-        sender.sendMessage(ChatColor.YELLOW + "/recon reload" + ChatColor.WHITE + " - Reload configuration");
-        sender.sendMessage(ChatColor.YELLOW + "/recon remove" + ChatColor.WHITE + " - Remove a connection profile");
+        sender.sendMessage(tr("usage.header"));
+        sender.sendMessage(tr("usage.create"));
+        sender.sendMessage(tr("usage.edit"));
+        sender.sendMessage(tr("usage.info"));
+        sender.sendMessage(tr("usage.test"));
+        sender.sendMessage(tr("usage.reload"));
+        sender.sendMessage(tr("usage.remove"));
         sender.sendMessage("");
-        sender.sendMessage(ChatColor.GRAY + "Parameters: u(ser): pw(password): i(p): o(p): pl(ayer): pe(rmission):");
+        sender.sendMessage(tr("usage.params"));
+    }
+
+    private String tr(String key) {
+        return plugin.getLangManager().get(key);
+    }
+
+    private String tr(String key, Map<String, String> placeholders) {
+        return plugin.getLangManager().format(key, placeholders);
     }
 
     /**

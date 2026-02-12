@@ -3,6 +3,7 @@ package net.enabify.recon;
 import net.enabify.recon.command.ReconCommand;
 import net.enabify.recon.command.ReconTabCompleter;
 import net.enabify.recon.config.ConfigManager;
+import net.enabify.recon.config.LangManager;
 import net.enabify.recon.config.QueueManager;
 import net.enabify.recon.config.UserManager;
 import net.enabify.recon.execution.CommandRunner;
@@ -22,6 +23,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class Recon extends JavaPlugin {
 
     private ConfigManager configManager;
+    private LangManager langManager;
     private UserManager userManager;
     private QueueManager queueManager;
     private ReconLogger reconLogger;
@@ -45,6 +47,7 @@ public final class Recon extends JavaPlugin {
 
         // 設定ファイル読み込み
         configManager = new ConfigManager(this);
+        langManager = new LangManager(this);
         userManager = new UserManager(this);
         queueManager = new QueueManager(this);
 
@@ -110,6 +113,10 @@ public final class Recon extends JavaPlugin {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    public LangManager getLangManager() {
+        return langManager;
     }
 
     public UserManager getUserManager() {

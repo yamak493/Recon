@@ -80,7 +80,9 @@ public class CommandRunner {
             try {
                 success = Bukkit.dispatchCommand(sender, command);
             } catch (Exception e) {
-                future.complete(new ExecutionResult(false, "Error: " + e.getMessage(), "", null));
+                future.complete(new ExecutionResult(false,
+                        plugin.getLangManager().format("error.command_execution",
+                                java.util.Collections.singletonMap("error", e.getMessage())), "", null));
                 return;
             }
 
@@ -90,7 +92,7 @@ public class CommandRunner {
             SchedulerUtil.runGlobalLater(plugin, () -> {
                 String response = sender.getOutput();
                 String plainResponse = sender.getPlainOutput();
-                String error = cmdSuccess ? null : "Command returned false.";
+                String error = cmdSuccess ? null : plugin.getLangManager().get("error.command_returned_false");
                 future.complete(new ExecutionResult(cmdSuccess, response, plainResponse, error));
             }, RESPONSE_WAIT_TICKS);
         });
@@ -98,7 +100,9 @@ public class CommandRunner {
         try {
             return future.get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
-            return new ExecutionResult(false, null, null, "Internal error: " + e.getMessage());
+            return new ExecutionResult(false, null, null,
+                    plugin.getLangManager().format("error.internal",
+                            java.util.Collections.singletonMap("error", e.getMessage())));
         }
     }
 
@@ -115,11 +119,12 @@ public class CommandRunner {
             if (queueIfOffline) {
                 plugin.getQueueManager().addToQueue(reconUser.getPlayer(), command, reconUser.getUser());
                 return new ExecutionResult(true,
-                        "Player is offline. Command queued for execution on login.",
-                        "Player is offline. Command queued for execution on login.", null);
+                        plugin.getLangManager().get("queue.player_offline_queued"),
+                        plugin.getLangManager().get("queue.player_offline_queued"), null);
             } else {
                 return new ExecutionResult(false, null, null,
-                        "Player '" + reconUser.getPlayer() + "' is offline and queue is disabled.");
+                        plugin.getLangManager().format("error.player_offline_queue_disabled",
+                                java.util.Collections.singletonMap("player", reconUser.getPlayer())));
             }
         }
 
@@ -135,7 +140,9 @@ public class CommandRunner {
                 success = executeWithPermissions(player, reconUser, command);
             } catch (Exception e) {
                 if (interceptorActive) interceptor.remove();
-                future.complete(new ExecutionResult(false, "Error: " + e.getMessage(), "", null));
+                future.complete(new ExecutionResult(false,
+                        plugin.getLangManager().format("error.command_execution",
+                                java.util.Collections.singletonMap("error", e.getMessage())), "", null));
                 return;
             }
 
@@ -153,7 +160,7 @@ public class CommandRunner {
                     response = "";
                     plainResponse = "";
                 }
-                String error = cmdSuccess ? null : "Command returned false.";
+                String error = cmdSuccess ? null : plugin.getLangManager().get("error.command_returned_false");
                 future.complete(new ExecutionResult(cmdSuccess, response, plainResponse, error));
             }, RESPONSE_WAIT_TICKS);
         });
@@ -161,7 +168,9 @@ public class CommandRunner {
         try {
             return future.get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
-            return new ExecutionResult(false, null, null, "Internal error: " + e.getMessage());
+            return new ExecutionResult(false, null, null,
+                    plugin.getLangManager().format("error.internal",
+                            java.util.Collections.singletonMap("error", e.getMessage())));
         }
     }
 
