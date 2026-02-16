@@ -46,6 +46,12 @@ Recon listens for `POST` requests at the root path (`/`).
 }
 ```
 
+`queue` is optional and defaults to `false`.
+
+- If `allow-queue-for-all-users: true` in `config.yml`, queue is enabled when request has `queue: true`.
+- If `allow-queue-for-all-users: false`, request `queue: true` is ignored by default.
+- Even when global setting is `false`, users with `queue: true` in `users.yml` can still use queue.
+
 ### Response Body
 ```json
 {
@@ -62,10 +68,10 @@ Recon listens for `POST` requests at the root path (`/`).
 
 | Command | Short Form | Description | Permission |
 |---------|------------|-------------|------------|
-| `/recon create user:<name> password:<pw> [ip:<ip>] [op:<bool>] [player:<name>] [permission:<perm>]` | `/recon create u: pw: [i:] [o:] [pl:] [pe:]` | Create a new profile for a specific user or player. | `recon.create.other.*` |
-| `/recon create password:<pw> [ip:<ip>] [op:<bool>] [permission:<perm>]` | `/recon create pw: [i:] [o:] [pe:]` | Create your own profile (target is yourself). | `recon.create.own.*` |
-| `/recon edit user:<name> [password:<pw>] [ip:<+/-ip>] [op:<bool>] [player:<name>] [permission:<+/-perm>]` | `/recon edit u: [pw:] [i:] [o:] [pl:] [pe:]` | Edit a specific user's profile. Use `+` or `-` for IPs/Perms. | `recon.edit.other.*` |
-| `/recon edit [password:<pw>] [ip:<+/-ip>] [op:<bool>] [permission:<+/-perm>]` | `/recon edit [pw:] [i:] [o:] [pe:]` | Edit your own connection profile. | `recon.edit.own.*` |
+| `/recon create user:<name> password:<pw> [ip:<ip>] [op:<bool>] [player:<name>]　[queue:<bool>] [permission:<perm>]` | `/recon create u: pw: [i:] [o:] [pl:] [q:] [pe:]` | Create a new profile for a specific user or player. | `recon.create.other.*` |
+| `/recon create password:<pw> [ip:<ip>] [op:<bool>] [queue:<bool>] [permission:<perm>]` | `/recon create pw: [i:] [o:] [q:] [pe:]` | Create your own profile (target is yourself). | `recon.create.own.*` |
+| `/recon edit user:<name> [password:<pw>] [ip:<+/-ip>] [op:<bool>] [queue:<bool>] [player:<name>] [permission:<+/-perm>]` | `/recon edit u: [pw:] [i:] [o:] [q:] [pl:] [pe:]` | Edit a specific user's profile. Use `+` or `-` for IPs/Perms. | `recon.edit.other.*` |
+| `/recon edit [password:<pw>] [ip:<+/-ip>] [op:<bool>] [queue:<bool>] [permission:<+/-perm>]` | `/recon edit [pw:] [i:] [o:] [q:] [pe:]` | Edit your own connection profile. | `recon.edit.own.*` |
 | `/recon info [user:<name>]` | `/recon info [u:]` | View profile details for yourself or another user. | `recon.info.own` / `recon.info.other` |
 | `/recon test` | - | Test connection stability and credentials. | (None) |
 | `/recon reload` | - | Reload configuration and language files. | `recon.reload` |

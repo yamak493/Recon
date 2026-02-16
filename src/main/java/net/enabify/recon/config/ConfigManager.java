@@ -18,6 +18,7 @@ public class ConfigManager {
     private boolean autoRegistration;
     private int port;
     private List<String> globalIpWhitelist;
+    private boolean allowQueueForAllUsers;
     private int queueExpiryHours;
     private int rateLimit;
     private String language;
@@ -42,6 +43,7 @@ public class ConfigManager {
         if (this.globalIpWhitelist == null) {
             this.globalIpWhitelist = new ArrayList<>();
         }
+        this.allowQueueForAllUsers = config.getBoolean("allow-queue-for-all-users", false);
         this.queueExpiryHours = config.getInt("queue-expiry-hours", 72);
         this.rateLimit = config.getInt("rate-limit", 30);
         this.language = config.getString("language", "en");
@@ -64,6 +66,10 @@ public class ConfigManager {
 
     public List<String> getGlobalIpWhitelist() {
         return globalIpWhitelist;
+    }
+
+    public boolean isAllowQueueForAllUsers() {
+        return allowQueueForAllUsers;
     }
 
     public int getQueueExpiryHours() {

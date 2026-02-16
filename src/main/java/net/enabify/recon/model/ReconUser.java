@@ -13,6 +13,7 @@ public class ReconUser {
     private String password;
     private List<String> ipWhitelist;
     private boolean op;
+    private boolean queue;
     private String player;
     private List<String> permissions;
 
@@ -21,6 +22,7 @@ public class ReconUser {
         this.password = password;
         this.ipWhitelist = new ArrayList<>();
         this.op = false;
+        this.queue = false;
         this.player = null;
         this.permissions = new ArrayList<>();
     }
@@ -57,6 +59,14 @@ public class ReconUser {
 
     public void setOp(boolean op) {
         this.op = op;
+    }
+
+    public boolean isQueue() {
+        return queue;
+    }
+
+    public void setQueue(boolean queue) {
+        this.queue = queue;
     }
 
     public String getPlayer() {

@@ -49,6 +49,7 @@ public class UserManager {
             ReconUser user = new ReconUser(key, section.getString("password", ""));
             user.setIpWhitelist(section.getStringList("ip-whitelist"));
             user.setOp(section.getBoolean("op", false));
+            user.setQueue(section.getBoolean("queue", false));
             user.setPlayer(section.getString("player", null));
             user.setPermissions(section.getStringList("permissions"));
             users.put(key, user);
@@ -68,6 +69,7 @@ public class UserManager {
             usersConfig.set(key + ".password", user.getPassword());
             usersConfig.set(key + ".ip-whitelist", user.getIpWhitelist());
             usersConfig.set(key + ".op", user.isOp());
+            usersConfig.set(key + ".queue", user.isQueue());
             usersConfig.set(key + ".player", user.getPlayer());
             usersConfig.set(key + ".permissions", user.getPermissions());
         }

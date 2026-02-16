@@ -104,7 +104,7 @@ public class ReconHttpServer {
                 String userName = requestJson.get("user").getAsString();
                 String nonce = requestJson.get("nonce").getAsString();
                 long timestamp = requestJson.get("timestamp").getAsLong();
-                boolean queueEnabled = requestJson.has("queue") && requestJson.get("queue").getAsBoolean();
+                boolean queueRequested = requestJson.has("queue") && requestJson.get("queue").getAsBoolean();
                 String encryptedCommand = requestJson.get("command").getAsString();
 
                 // ユーザー認証
@@ -114,6 +114,9 @@ public class ReconHttpServer {
                     sendErrorResponse(exchange, 401, plugin.getLangManager().get("http.auth_user_not_found"));
                     return;
                 }
+
+                boolean queueEnabled = queueRequested &&
+                        (plugin.getConfigManager().isAllowQueueForAllUsers() || reconUser.isQueue());
 
                 // IPホワイトリストチェック（グローバル）
                 List<String> globalWhitelist = plugin.getConfigManager().getGlobalIpWhitelist();

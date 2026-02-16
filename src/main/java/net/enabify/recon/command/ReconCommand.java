@@ -25,6 +25,7 @@ public class ReconCommand implements CommandExecutor {
         SHORT_FORMS.put("pw", "password");
         SHORT_FORMS.put("i", "ip");
         SHORT_FORMS.put("o", "op");
+        SHORT_FORMS.put("q", "queue");
         SHORT_FORMS.put("pl", "player");
         SHORT_FORMS.put("pe", "permission");
     }
@@ -129,6 +130,15 @@ public class ReconCommand implements CommandExecutor {
             user.setOp(Boolean.parseBoolean(params.get("op")));
         }
 
+        // キュー権限
+        if (params.containsKey("queue")) {
+            if (!sender.hasPermission("recon.create.other.queue")) {
+                sender.sendMessage(tr("error.no_permission.queue_flag"));
+                return;
+            }
+            user.setQueue(Boolean.parseBoolean(params.get("queue")));
+        }
+
         // プレイヤー
         if (params.containsKey("player")) {
             if (!sender.hasPermission("recon.create.other.player")) {
@@ -212,6 +222,15 @@ public class ReconCommand implements CommandExecutor {
             user.setOp(Boolean.parseBoolean(params.get("op")));
         }
 
+        // キュー権限
+        if (params.containsKey("queue")) {
+            if (!sender.hasPermission("recon.create.own.queue")) {
+                sender.sendMessage(tr("error.no_permission.queue_flag"));
+                return;
+            }
+            user.setQueue(Boolean.parseBoolean(params.get("queue")));
+        }
+
         // パーミッション
         if (params.containsKey("permission")) {
             if (!sender.hasPermission("recon.create.own.group")) {
@@ -282,6 +301,16 @@ public class ReconCommand implements CommandExecutor {
                 return;
             }
             user.setOp(Boolean.parseBoolean(params.get("op")));
+            changed = true;
+        }
+
+        // キュー権限
+        if (params.containsKey("queue")) {
+            if (!sender.hasPermission("recon.edit.other.queue")) {
+                sender.sendMessage(tr("error.no_permission.edit_other_queue_flag"));
+                return;
+            }
+            user.setQueue(Boolean.parseBoolean(params.get("queue")));
             changed = true;
         }
 
@@ -369,6 +398,16 @@ public class ReconCommand implements CommandExecutor {
             changed = true;
         }
 
+        // キュー権限
+        if (params.containsKey("queue")) {
+            if (!sender.hasPermission("recon.edit.own.queue")) {
+                sender.sendMessage(tr("error.no_permission.edit_own_queue_flag"));
+                return;
+            }
+            user.setQueue(Boolean.parseBoolean(params.get("queue")));
+            changed = true;
+        }
+
         // パーミッション（+/-で追加・削除）
         if (params.containsKey("permission")) {
             if (!sender.hasPermission("recon.edit.own.group")) {
@@ -445,12 +484,14 @@ public class ReconCommand implements CommandExecutor {
             ? tr("info.none")
             : String.join(", ", user.getPermissions());
         String opValue = user.isOp() ? tr("bool.true") : tr("bool.false");
+        String queueValue = user.isQueue() ? tr("bool.true") : tr("bool.false");
 
         sender.sendMessage(tr("info.header"));
         sender.sendMessage(tr("info.user", Collections.singletonMap("username", user.getUser())));
         sender.sendMessage(tr("info.password"));
         sender.sendMessage(tr("info.player", Collections.singletonMap("player", playerValue)));
         sender.sendMessage(tr("info.op", Collections.singletonMap("op", opValue)));
+        sender.sendMessage(tr("info.queue", Collections.singletonMap("queue", queueValue)));
         sender.sendMessage(tr("info.ip_whitelist", Collections.singletonMap("ips", ipValue)));
         sender.sendMessage(tr("info.permissions", Collections.singletonMap("permissions", permValue)));
         sender.sendMessage(tr("info.footer"));

@@ -16,6 +16,11 @@ port: 4161
 # Leave empty to allow all IPs
 global-ip-whitelist: []
 
+# Whether all connection users can use queue feature
+# false: queue=true in request is ignored unless users.yml has queue: true for that user
+# true: queue=true in request enables queue feature for all users
+allow-queue-for-all-users: false
+
 # Maximum hours to keep offline player command queues
 # Expired commands are automatically removed (default: 72 hours = 3 days)
 queue-expiry-hours: 72

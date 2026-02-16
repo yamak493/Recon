@@ -9,6 +9,7 @@ error.password_required_create_other: "&cكلمة المرور مطلوبة. ا�
 error.user_exists: "&cالمستخدم '{username}' موجود بالفعل. استخدم /recon edit للتعديل."
 error.no_permission.ip_whitelist: "&cليس لديك إذن لضبط قائمة IP البيضاء."
 error.no_permission.op_flag: "&cليس لديك إذن لضبط علامة OP."
+error.no_permission.queue_flag: "&cليس لديك إذن لضبط علامة قائمة الانتظار."
 error.no_permission.player: "&cليس لديك إذن لتعيين اللاعب."
 error.no_permission.permissions: "&cليس لديك إذن لضبط الصلاحيات."
 success.user_profile_created: "&aتم إنشاء ملف المستخدم '{username}' بنجاح."
@@ -24,6 +25,7 @@ error.user_not_found: "&cلم يتم العثور على المستخدم '{user
 error.no_permission.edit_other_password: "&cليس لديك إذن لتعديل كلمة مرور مستخدم آخر."
 error.no_permission.edit_other_ip_whitelist: "&cليس لديك إذن لتعديل قائمة IP البيضاء لمستخدم آخر."
 error.no_permission.edit_other_op_flag: "&cليس لديك إذن لتعديل علامة OP لمستخدم آخر."
+error.no_permission.edit_other_queue_flag: "&cليس لديك إذن لتعديل علامة قائمة الانتظار لمستخدم آخر."
 error.no_permission.edit_other_player: "&cليس لديك إذن لتعديل اللاعب لمستخدم آخر."
 error.no_permission.edit_other_permissions: "&cليس لديك إذن لتعديل صلاحيات مستخدم آخر."
 success.user_profile_updated: "&aتم تحديث ملف المستخدم '{username}' بنجاح."
@@ -33,6 +35,7 @@ error.no_profile: "&cليس لديك ملف شخصي. استخدم /recon create
 error.no_permission.edit_own_password: "&cليس لديك إذن لتعديل كلمة المرور الخاصة بك."
 error.no_permission.edit_own_ip_whitelist: "&cليس لديك إذن لتعديل قائمة IP البيضاء الخاصة بك."
 error.no_permission.edit_own_op_flag: "&cليس لديك إذن لتعديل علامة OP الخاصة بك."
+error.no_permission.edit_own_queue_flag: "&cليس لديك إذن لتعديل علامة قائمة الانتظار الخاصة بك."
 error.no_permission.edit_own_permissions: "&cليس لديك إذن لتعديل صلاحياتك."
 success.profile_updated: "&aتم تحديث ملفك الشخصي بنجاح."
 
@@ -46,6 +49,7 @@ info.password: "&b  كلمة المرور: &7********"
 info.player: "&b  اللاعب: &f{player}"
 info.player_console: "(وحدة التحكم)"
 info.op: "&b  OP: &f{op}"
+info.queue: "&b  قائمة الانتظار: &f{queue}"
 info.ip_whitelist: "&b  قائمة IP البيضاء: &f{ips}"
 info.permissions: "&b  الصلاحيات: &f{permissions}"
 info.none: "(لا شيء)"
@@ -72,7 +76,7 @@ usage.info: "&e/recon info&r - عرض ملف اتصال"
 usage.test: "&e/recon test&r - اختبار الاتصال"
 usage.reload: "&e/recon reload&r - إعادة تحميل الإعدادات"
 usage.remove: "&e/recon remove&r - إزالة ملف اتصال"
-usage.params: "&7المعاملات: u(ser): pw(password): i(p): o(p): pl(ayer): pe(rmission):"
+usage.params: "&7المعاملات: u(ser): pw(password): i(p): o(p): q(ueue): pl(ayer): pe(rmission):"
 
 bool.true: "نعم"
 bool.false: "لا"

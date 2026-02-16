@@ -19,7 +19,7 @@ public class ReconTabCompleter implements TabCompleter {
 
     private static final List<String> SUB_COMMANDS = Arrays.asList("create", "edit", "info", "test", "reload", "remove");
     private static final List<String> CREATE_EDIT_PARAMS = Arrays.asList(
-            "user:", "u:", "password:", "pw:", "ip:", "i:", "op:", "o:", "player:", "pl:", "permission:", "pe:");
+            "user:", "u:", "password:", "pw:", "ip:", "i:", "op:", "o:", "player:", "pl:", "permission:", "pe:", "queue:", "q:");
     private static final List<String> INFO_PARAMS = Arrays.asList("user:", "u:");
     private static final List<String> REMOVE_PARAMS = Arrays.asList("user:", "u:");
 
@@ -92,7 +92,8 @@ public class ReconTabCompleter implements TabCompleter {
                 {"ip:", "i:"},
                 {"op:", "o:"},
                 {"player:", "pl:"},
-                {"permission:", "pe:"}
+                {"permission:", "pe:"},
+                {"queue:", "q:"}
         };
 
         for (String[] pair : pairs) {
