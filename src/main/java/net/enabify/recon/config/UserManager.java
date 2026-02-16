@@ -1,83 +1,122 @@
 package net.enabify.recon.config;
 
 import net.enabify.recon.Recon;
+import net.enabify.recon.config.userstorage.SqlUserStorage;
+import net.enabify.recon.config.userstorage.UserStorage;
+import net.enabify.recon.config.userstorage.YamlUserStorage;
 import net.enabify.recon.model.ReconUser;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * users.yml の管理クラス
- * API接続ユーザーの認証情報・権限を管理する
+ * Reconユーザー情報の管理クラス
+ * 保存基盤として users.yml / MySQL / MariaDB を選択可能
  */
 public class UserManager {
 
     private final Recon plugin;
-    private final File usersFile;
-    private YamlConfiguration usersConfig;
-    private final Map<String, ReconUser> users = new HashMap<>();
+    private UserStorage storage;
+    private final Map<String, ReconUser> users = new ConcurrentHashMap<>();
 
     public UserManager(Recon plugin) {
         this.plugin = plugin;
-        this.usersFile = new File(plugin.getDataFolder(), "users.yml");
-        loadUsers();
+        this.storage = createStorage(plugin.getConfigManager());
+        initializeStorage();
     }
 
     /**
-     * users.ymlからユーザー情報を読み込む
+     * 設定再読み込み時に、ストレージ種別変更を反映する
      */
-    public void loadUsers() {
-        if (!usersFile.exists()) {
+    public synchronized void reloadStorageBackend() {
+        this.storage = createStorage(plugin.getConfigManager());
+        initializeStorage();
+    }
+
+    private void initializeStorage() {
+        try {
+            storage.initialize();
+            loadUsers();
+
+            if (storage.isDatabaseBackend()
+                    && plugin.getConfigManager().isMigrateUsersFromYamlOnFirstRun()) {
+                migrateFromYamlIfNeeded();
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to initialize user storage '"
+                    + storage.getBackendName() + "': " + e.getMessage());
+            plugin.getLogger().warning("Falling back to YAML user storage.");
+
+            this.storage = new YamlUserStorage(plugin);
             try {
-                usersFile.getParentFile().mkdirs();
-                usersFile.createNewFile();
-            } catch (IOException e) {
-                plugin.getLogger().severe("Failed to create users.yml: " + e.getMessage());
+                this.storage.initialize();
+                loadUsers();
+            } catch (Exception fallbackEx) {
+                plugin.getLogger().severe("Failed to initialize fallback YAML storage: "
+                        + fallbackEx.getMessage());
             }
         }
-
-        usersConfig = YamlConfiguration.loadConfiguration(usersFile);
-        users.clear();
-
-        for (String key : usersConfig.getKeys(false)) {
-            ConfigurationSection section = usersConfig.getConfigurationSection(key);
-            if (section == null) continue;
-
-            ReconUser user = new ReconUser(key, section.getString("password", ""));
-            user.setIpWhitelist(section.getStringList("ip-whitelist"));
-            user.setOp(section.getBoolean("op", false));
-            user.setQueue(section.getBoolean("queue", false));
-            user.setPlayer(section.getString("player", null));
-            user.setPermissions(section.getStringList("permissions"));
-            users.put(key, user);
-        }
     }
 
-    /**
-     * 全ユーザー情報をusers.ymlに保存する
-     */
-    public void saveUsers() {
-        usersConfig = new YamlConfiguration();
+    private UserStorage createStorage(ConfigManager configManager) {
+        ConfigManager.UserStorageType storageType = configManager.getUserStorageType();
+        if (storageType == ConfigManager.UserStorageType.MYSQL
+                || storageType == ConfigManager.UserStorageType.MARIADB) {
+            return new SqlUserStorage(plugin, storageType, configManager.getDatabaseSettings());
+        }
+        return new YamlUserStorage(plugin);
+    }
 
-        for (Map.Entry<String, ReconUser> entry : users.entrySet()) {
-            String key = entry.getKey();
-            ReconUser user = entry.getValue();
-
-            usersConfig.set(key + ".password", user.getPassword());
-            usersConfig.set(key + ".ip-whitelist", user.getIpWhitelist());
-            usersConfig.set(key + ".op", user.isOp());
-            usersConfig.set(key + ".queue", user.isQueue());
-            usersConfig.set(key + ".player", user.getPlayer());
-            usersConfig.set(key + ".permissions", user.getPermissions());
+    private void migrateFromYamlIfNeeded() {
+        if (!users.isEmpty()) {
+            return;
         }
 
         try {
-            usersConfig.save(usersFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save users.yml: " + e.getMessage());
+            YamlUserStorage yamlStorage = new YamlUserStorage(plugin);
+            yamlStorage.initialize();
+            Map<String, ReconUser> yamlUsers = yamlStorage.loadAllUsers();
+            if (yamlUsers.isEmpty()) {
+                return;
+            }
+
+            storage.saveAllUsers(yamlUsers.values());
+            users.clear();
+            users.putAll(yamlUsers);
+            plugin.getLogger().info("Imported " + yamlUsers.size()
+                    + " user(s) from users.yml to " + storage.getBackendName() + " storage.");
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to import users.yml into database storage: "
+                    + e.getMessage());
+        }
+    }
+
+    /**
+     * ストレージからユーザー情報を読み込む
+     */
+    public synchronized void loadUsers() {
+        try {
+            Map<String, ReconUser> loadedUsers = storage.loadAllUsers();
+            users.clear();
+            users.putAll(loadedUsers);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to load users from "
+                    + storage.getBackendName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * 全ユーザー情報を現在のストレージに保存する
+     */
+    public synchronized void saveUsers() {
+        try {
+            storage.saveAllUsers(new ArrayList<>(users.values()));
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to save users to "
+                    + storage.getBackendName() + ": " + e.getMessage());
         }
     }
 
@@ -91,17 +130,37 @@ public class UserManager {
     /**
      * ユーザーを追加・更新する
      */
-    public void addUser(ReconUser user) {
-        users.put(user.getUser(), user);
-        saveUsers();
+    public synchronized void addUser(ReconUser user) {
+        ReconUser previous = users.put(user.getUser(), user);
+        try {
+            storage.upsertUser(user);
+        } catch (Exception e) {
+            if (previous == null) {
+                users.remove(user.getUser());
+            } else {
+                users.put(previous.getUser(), previous);
+            }
+            plugin.getLogger().severe("Failed to upsert user '" + user.getUser() + "' to "
+                    + storage.getBackendName() + ": " + e.getMessage());
+        }
     }
 
     /**
      * ユーザーを削除する
      */
-    public void removeUser(String username) {
-        users.remove(username);
-        saveUsers();
+    public synchronized void removeUser(String username) {
+        ReconUser previous = users.remove(username);
+        if (previous == null) {
+            return;
+        }
+
+        try {
+            storage.deleteUser(username);
+        } catch (Exception e) {
+            users.put(username, previous);
+            plugin.getLogger().severe("Failed to delete user '" + username + "' from "
+                    + storage.getBackendName() + ": " + e.getMessage());
+        }
     }
 
     /**
@@ -127,6 +186,13 @@ public class UserManager {
      * 全ユーザーを取得する（読み取り専用）
      */
     public Map<String, ReconUser> getUsers() {
-        return Collections.unmodifiableMap(users);
+        return Collections.unmodifiableMap(new HashMap<>(users));
+    }
+
+    /**
+     * 現在利用中のユーザーストレージ名を取得する
+     */
+    public String getStorageBackendName() {
+        return storage.getBackendName();
     }
 }

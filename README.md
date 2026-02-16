@@ -31,6 +31,16 @@ The name **Recon** stands for three core principles:
 3. Configure the HTTP port (default: `4161`) and other settings in [config.yml](src/main/resources/config.yml).
 4. Use the `/recon` command in-game to create your first API user.
 
+## User Storage Backend
+
+By default, Recon stores users in `users.yml`.
+
+You can switch to MySQL or MariaDB from `config.yml`:
+
+Notes:
+- `migrate-from-yaml-on-first-run: true` imports existing `users.yml` data into DB when DB table is empty.
+- `/recon reload` also applies backend type changes and reconnects user storage.
+
 ## API Specification
 
 Recon listens for `POST` requests at the root path (`/`).

@@ -51,6 +51,8 @@ public final class Recon extends JavaPlugin {
         userManager = new UserManager(this);
         queueManager = new QueueManager(this);
 
+        getLogger().info("User storage backend: " + userManager.getStorageBackendName());
+
         // ユーティリティ初期化
         reconLogger = new ReconLogger(this);
         nonceTracker = new NonceTracker();

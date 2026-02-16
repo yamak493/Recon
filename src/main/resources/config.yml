@@ -31,3 +31,25 @@ rate-limit: 30
 # Language code for messages
 # Supported: en, hi, zh, es, ar, fr, ru, pt, id, de, ja
 language: en
+
+# User data storage
+# enabled: true to use database, false to use users.yml
+database:
+  enabled: false
+  host: 127.0.0.1
+  port: 3306
+  name: recon
+  username: root
+  password: password
+  
+  # Table names will be: <table-prefix>users
+  table-prefix: recon_
+
+  # JDBC options
+  use-ssl: false
+  connect-timeout-ms: 5000
+  socket-timeout-ms: 10000
+
+# When database is enabled and the database table is empty,
+# existing users.yml entries are imported automatically once.
+migrate-from-yaml-on-first-run: true

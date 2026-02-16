@@ -518,7 +518,7 @@ public class ReconCommand implements CommandExecutor {
 
         try {
             plugin.getConfigManager().loadConfig();
-            plugin.getUserManager().loadUsers();
+            plugin.getUserManager().reloadStorageBackend();
             plugin.getQueueManager().loadQueues();
             plugin.getLangManager().reload();
 
