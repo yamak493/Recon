@@ -111,7 +111,7 @@ Shortcuts can be uploaded to the cloud and shared by entering an ID. ☁
 > [!IMPORTANT]
 > This application is a smartphone client for Recon. To use it, you must first install the Recon plugin on your server.
 
-Get it on [Google Play](https://play.google.com/store/apps/details?id=com.enabify.recon) or [App Store]().
+Get it on [Google Play](https://play.google.com/store/apps/details?id=com.enabify.recon) or [App Store](https://apps.apple.com/us/app/recon-remote-control-mc/id6759136210).
 
 ## License
 
