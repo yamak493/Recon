@@ -13,6 +13,8 @@ import net.enabify.recon.listener.PlayerJoinListener;
 import net.enabify.recon.logging.ReconLogger;
 import net.enabify.recon.util.NonceTracker;
 import net.enabify.recon.util.SchedulerUtil;
+import org.bstats.bukkit.Metrics;
+import org.bstats.charts.SimplePie;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -39,6 +41,16 @@ public final class Recon extends JavaPlugin {
         getLogger().info("       Recon v" + getDescription().getVersion());
         getLogger().info("  REST API for Minecraft");
         getLogger().info("==============================");
+
+        // You can find the plugin id of your plugins on
+        // the page https://bstats.org/what-is-my-plugin-id
+        int pluginId = 29597;
+        Metrics metrics = new Metrics(this, pluginId);
+
+        // Optional: Add custom charts
+        metrics.addCustomChart(
+            new SimplePie("chart_id", () -> "My value")
+        );
 
         // Folia検出
         if (SchedulerUtil.isFolia()) {
