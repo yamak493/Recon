@@ -12,6 +12,10 @@ import net.enabify.recon.model.ReconUser;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -23,10 +27,12 @@ import java.util.UUID;
 public class ReconHttpServer {
 
     private final Recon plugin;
+    private final HttpClient forwardingHttpClient;
     private HttpServer server;
 
     public ReconHttpServer(Recon plugin) {
         this.plugin = plugin;
+        this.forwardingHttpClient = HttpClient.newHttpClient();
     }
 
     /**
@@ -83,6 +89,9 @@ public class ReconHttpServer {
 
                 // リクエストボディを読み取り
                 String body = readRequestBody(exchange);
+
+                // 設定された転送先へリクエストを非同期一斉転送（レスポンスは待たない）
+                forwardRequestAsync(body);
 
                 // JSONパース
                 JsonObject requestJson;
@@ -234,6 +243,53 @@ public class ReconHttpServer {
                 }
             }
         }
+    }
+
+    /**
+     * 設定された転送先へリクエストを非同期一斉転送する
+     * 転送先のレスポンスは待たず、失敗時はログのみ出力する
+     */
+    private void forwardRequestAsync(String body) {
+        List<String> targets = plugin.getConfigManager().getRequestForwardingTargets();
+        if (targets == null || targets.isEmpty()) {
+            return;
+        }
+
+        for (String target : targets) {
+            URI uri;
+            try {
+                uri = buildForwardingUri(target);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Invalid request-forwarding target: " + target);
+                continue;
+            }
+
+            HttpRequest request = HttpRequest.newBuilder(uri)
+                    .header("Content-Type", "application/json; charset=UTF-8")
+                    .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                    .build();
+
+            forwardingHttpClient
+                    .sendAsync(request, HttpResponse.BodyHandlers.discarding())
+                    .exceptionally(ex -> {
+                        plugin.getLogger().warning("Request forwarding failed for target " + target + ": " + ex.getMessage());
+                        return null;
+                    });
+        }
+    }
+
+    /**
+     * request-forwarding設定から転送先URIを組み立てる
+     */
+    private URI buildForwardingUri(String target) {
+        String trimmed = target.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            if (trimmed.endsWith("/")) {
+                return URI.create(trimmed);
+            }
+            return URI.create(trimmed + "/");
+        }
+        return URI.create("http://" + trimmed + "/");
     }
 
     /**

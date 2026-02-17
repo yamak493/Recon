@@ -16,6 +16,11 @@ port: 4161
 # Leave empty to allow all IPs
 global-ip-whitelist: []
 
+# Forward incoming API requests to other Recon servers
+# Format: host:port (or full URL such as http://host:port)
+# These requests are forwarded asynchronously and this server does not wait for responses.
+request-forwarding: []
+
 # Whether all connection users can use queue feature
 # false: queue=true in request is ignored unless users.yml has queue: true for that user
 # true: queue=true in request enables queue feature for all users

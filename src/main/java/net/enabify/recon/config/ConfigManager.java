@@ -4,6 +4,7 @@ import net.enabify.recon.Recon;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -19,6 +20,7 @@ public class ConfigManager {
     private boolean autoRegistration;
     private int port;
     private List<String> globalIpWhitelist;
+    private List<String> requestForwardingTargets;
     private boolean allowQueueForAllUsers;
     private int queueExpiryHours;
     private int rateLimit;
@@ -47,6 +49,22 @@ public class ConfigManager {
         if (this.globalIpWhitelist == null) {
             this.globalIpWhitelist = new ArrayList<>();
         }
+
+        List<String> forwardingList = config.getStringList("request-forwarding");
+        List<String> normalizedForwardingList = new ArrayList<>();
+        if (forwardingList != null) {
+            for (String target : forwardingList) {
+                if (target == null) {
+                    continue;
+                }
+                String trimmed = target.trim();
+                if (!trimmed.isEmpty()) {
+                    normalizedForwardingList.add(trimmed);
+                }
+            }
+        }
+        this.requestForwardingTargets = Collections.unmodifiableList(normalizedForwardingList);
+
         this.allowQueueForAllUsers = config.getBoolean("allow-queue-for-all-users", false);
         this.queueExpiryHours = config.getInt("queue-expiry-hours", 72);
         this.rateLimit = config.getInt("rate-limit", 30);
@@ -107,6 +125,10 @@ public class ConfigManager {
 
     public List<String> getGlobalIpWhitelist() {
         return globalIpWhitelist;
+    }
+
+    public List<String> getRequestForwardingTargets() {
+        return requestForwardingTargets;
     }
 
     public boolean isAllowQueueForAllUsers() {
