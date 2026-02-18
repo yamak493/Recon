@@ -1,12 +1,19 @@
 package net.enabify.recon.config;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -37,12 +44,118 @@ public class ConfigManager {
         loadConfig();
     }
 
+    private void updateConfigWithComments(File configFile, SimpleYamlConfig userConfig) throws Exception {
+        List<String> lines;
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream("config.yml");
+             BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"))) {
+            lines = new ArrayList<>();
+            String line;
+            String currentSection = "";
+            while ((line = reader.readLine()) != null) {
+                String trimmedLine = line.trim();
+                // コメント、空行、またはリスト要素("-")はそのまま
+                if (trimmedLine.isEmpty() || trimmedLine.startsWith("#") || trimmedLine.startsWith("-")) {
+                    lines.add(line);
+                    continue;
+                }
+
+                if (trimmedLine.contains(":")) {
+                    String[] parts = line.split(":", 2);
+                    String key = parts[0].trim();
+                    String fullPath = key;
+
+                    // インデントからセクションを判定 (簡易版)
+                    int indent = 0;
+                    while (indent < line.length() && line.charAt(indent) == ' ') {
+                        indent++;
+                    }
+
+                    if (indent == 0) {
+                        currentSection = key;
+                        fullPath = key;
+                    } else if (indent == 2) {
+                        fullPath = currentSection + "." + key;
+                    }
+
+                    if (userConfig.contains(fullPath)) {
+                        Object userVal = getRawValue(userConfig, fullPath);
+                        if (userVal != null) {
+                            String dumped;
+                            if (userVal instanceof String || userVal instanceof Number || userVal instanceof Boolean) {
+                                dumped = String.valueOf(userVal);
+                            } else {
+                                dumped = new org.yaml.snakeyaml.Yaml().dump(userVal).trim();
+                            }
+
+                            // インデントを維持して置換
+                            StringBuilder newLine = new StringBuilder();
+                            for (int i = 0; i < indent; i++) newLine.append(" ");
+                            newLine.append(key).append(": ").append(dumped);
+                            lines.add(newLine.toString());
+                        } else {
+                            lines.add(line);
+                        }
+                    } else {
+                        lines.add(line);
+                    }
+                } else {
+                    lines.add(line);
+                }
+            }
+        }
+
+        // 新しい内容を書き込む
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(configFile), "UTF-8"))) {
+            for (String line : lines) {
+                writer.write(line);
+                writer.newLine();
+            }
+        }
+    }
+
     /**
-     * config.ymlを読み込む（デフォルト値の保存含む）
+     * SimpleYamlConfigから生のオブジェクトを取得
      */
+    @SuppressWarnings("unchecked")
+    private Object getRawValue(SimpleYamlConfig config, String path) {
+        if (!path.contains(".")) {
+            return config.getData().get(path);
+        }
+
+        String[] parts = path.split("\\.", 2);
+        Object section = config.getData().get(parts[0]);
+        if (section instanceof Map) {
+            return ((Map<String, Object>) section).get(parts[1]);
+        }
+        return null;
+    }
+
     public void loadConfig() {
         saveDefaultConfig();
-        SimpleYamlConfig config = SimpleYamlConfig.load(new File(dataFolder, "config.yml"));
+        File configFile = new File(dataFolder, "config.yml");
+        SimpleYamlConfig config = SimpleYamlConfig.load(configFile);
+
+        // デフォルト設定を取得して同期する
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream("config.yml")) {
+            if (in != null) {
+                SimpleYamlConfig defaults = SimpleYamlConfig.load(in);
+
+                // config-versionが古い、または存在しない場合も更新を走らせる
+                int defaultVersion = defaults.getInt("config-version", 0);
+                int currentVersion = config.getInt("config-version", 0);
+
+                if (currentVersion < defaultVersion) {
+                    // 自動更新: 既存の値を保持しつつ、新しいテンプレート(コメント付き)に差し替える
+                    updateConfigWithComments(configFile, config);
+                    // 差し替え後に再読み込み
+                    config = SimpleYamlConfig.load(configFile);
+                    logger.info("Updated config.yml with missing items or new version while preserving comments.");
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to sync config.yml with defaults: " + e.getMessage());
+            // e.printStackTrace(); // 運用時は消しても良い
+        }
 
         this.allowSelfRegistration = config.getBoolean("allow-self-registration", false);
         this.autoRegistration = config.getBoolean("auto-registration", false);

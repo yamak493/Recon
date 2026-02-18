@@ -1,5 +1,8 @@
 # Recon Configuration
 
+# DO NOT CHANGE THIS VERSION
+config-version: 1
+
 # Whether players can register their own connection profiles
 # When true, any player can use "/recon create" to register themselves
 allow-self-registration: false

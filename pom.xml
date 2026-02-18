@@ -6,7 +6,7 @@
 
   <groupId>net.enabify</groupId>
   <artifactId>Recon</artifactId>
-  <version>1.4-SNAPSHOT</version>
+  <version>1.5-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Recon</name>

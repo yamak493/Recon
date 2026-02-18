@@ -26,6 +26,13 @@ public class SimpleYamlConfig {
     }
 
     /**
+     * 全ての設定データをMapとして取得
+     */
+    public Map<String, Object> getData() {
+        return data;
+    }
+
+    /**
      * ファイルからYAML設定を読み込む
      */
     @SuppressWarnings("unchecked")
@@ -34,6 +41,25 @@ public class SimpleYamlConfig {
         if (file.exists()) {
             try (FileInputStream fis = new FileInputStream(file);
                  InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8)) {
+                Object loaded = config.yaml.load(reader);
+                if (loaded instanceof Map) {
+                    config.data = (Map<String, Object>) loaded;
+                }
+            } catch (Exception e) {
+                // 読み込み失敗時は空の設定を返す
+            }
+        }
+        return config;
+    }
+
+    /**
+     * InputStreamからYAML設定を読み込む
+     */
+    @SuppressWarnings("unchecked")
+    public static SimpleYamlConfig load(InputStream in) {
+        SimpleYamlConfig config = new SimpleYamlConfig();
+        if (in != null) {
+            try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
                 Object loaded = config.yaml.load(reader);
                 if (loaded instanceof Map) {
                     config.data = (Map<String, Object>) loaded;
@@ -199,5 +225,69 @@ public class SimpleYamlConfig {
             return (Map<String, Object>) val;
         }
         return null;
+    }
+
+    /**
+     * デフォルト設定から不足しているキーをコピーする
+     * ※このメソッドは古い値を現在のインスタンスにコピーする際に使用します
+     */
+    public boolean merge(SimpleYamlConfig oldConfig) {
+        if (oldConfig == null) return false;
+        return mergeRecursive(oldConfig.data, this.data);
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean mergeRecursive(Map<String, Object> source, Map<String, Object> target) {
+        boolean changed = false;
+        for (Map.Entry<String, Object> entry : source.entrySet()) {
+            String key = entry.getKey();
+            Object sourceValue = entry.getValue();
+
+            if (target.containsKey(key)) {
+                Object targetValue = target.get(key);
+                if (sourceValue instanceof Map && targetValue instanceof Map) {
+                    if (mergeRecursive((Map<String, Object>) sourceValue, (Map<String, Object>) targetValue)) {
+                        changed = true;
+                    }
+                } else {
+                    // 既存の値がある場合は、デフォルトを既存の値で上書きする
+                    if (!Objects.equals(sourceValue, targetValue)) {
+                        target.put(key, sourceValue);
+                        changed = true;
+                    }
+                }
+            }
+        }
+        return changed;
+    }
+
+    /**
+     * デフォルト設定から不足しているキーをコピーする
+     */
+    public boolean copyDefaults(SimpleYamlConfig defaults) {
+        if (defaults == null) return false;
+        return copyRecursive(defaults.data, this.data);
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean copyRecursive(Map<String, Object> source, Map<String, Object> target) {
+        boolean changed = false;
+        for (Map.Entry<String, Object> entry : source.entrySet()) {
+            String key = entry.getKey();
+            Object sourceValue = entry.getValue();
+
+            if (!target.containsKey(key)) {
+                target.put(key, sourceValue);
+                changed = true;
+            } else {
+                Object targetValue = target.get(key);
+                if (sourceValue instanceof Map && targetValue instanceof Map) {
+                    if (copyRecursive((Map<String, Object>) sourceValue, (Map<String, Object>) targetValue)) {
+                        changed = true;
+                    }
+                }
+            }
+        }
+        return changed;
     }
 }
