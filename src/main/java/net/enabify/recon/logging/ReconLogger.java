@@ -1,7 +1,5 @@
 package net.enabify.recon.logging;
 
-import net.enabify.recon.Recon;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -19,8 +17,8 @@ public class ReconLogger {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    public ReconLogger(Recon plugin) {
-        this.logFolder = new File(plugin.getDataFolder(), "logs");
+    public ReconLogger(File dataFolder) {
+        this.logFolder = new File(dataFolder, "logs");
         if (!logFolder.exists()) {
             logFolder.mkdirs();
         }

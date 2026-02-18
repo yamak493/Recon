@@ -1,11 +1,9 @@
 package net.enabify.recon.config;
 
-import net.enabify.recon.Recon;
-import org.bukkit.configuration.file.YamlConfiguration;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * queues.yml の管理クラス
@@ -13,9 +11,11 @@ import java.util.*;
  */
 public class QueueManager {
 
-    private final Recon plugin;
+    private final File dataFolder;
+    private final ConfigManager configManager;
+    private final Logger logger;
     private final File queuesFile;
-    private YamlConfiguration queuesConfig;
+    private SimpleYamlConfig queuesConfig;
 
     /**
      * キューに保存されたコマンドのデータクラス
@@ -32,9 +32,11 @@ public class QueueManager {
         }
     }
 
-    public QueueManager(Recon plugin) {
-        this.plugin = plugin;
-        this.queuesFile = new File(plugin.getDataFolder(), "queues.yml");
+    public QueueManager(File dataFolder, ConfigManager configManager, Logger logger) {
+        this.dataFolder = dataFolder;
+        this.configManager = configManager;
+        this.logger = logger;
+        this.queuesFile = new File(dataFolder, "queues.yml");
         loadQueues();
     }
 
@@ -47,10 +49,10 @@ public class QueueManager {
                 queuesFile.getParentFile().mkdirs();
                 queuesFile.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("Failed to create queues.yml: " + e.getMessage());
+                logger.severe("Failed to create queues.yml: " + e.getMessage());
             }
         }
-        queuesConfig = YamlConfiguration.loadConfiguration(queuesFile);
+        queuesConfig = SimpleYamlConfig.load(queuesFile);
     }
 
     /**
@@ -60,7 +62,7 @@ public class QueueManager {
         try {
             queuesConfig.save(queuesFile);
         } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save queues.yml: " + e.getMessage());
+            logger.severe("Failed to save queues.yml: " + e.getMessage());
         }
     }
 
@@ -116,12 +118,12 @@ public class QueueManager {
      * config.ymlのqueue-expiry-hours設定に基づいて古いキューを削除する
      */
     public void cleanExpiredEntries() {
-        long expiryHours = plugin.getConfigManager().getQueueExpiryHours();
+        long expiryHours = configManager.getQueueExpiryHours();
         long expirySeconds = expiryHours * 3600L;
         long now = System.currentTimeMillis() / 1000L;
         boolean changed = false;
 
-        for (String playerName : new ArrayList<>(queuesConfig.getKeys(false))) {
+        for (String playerName : new ArrayList<>(queuesConfig.getKeys())) {
             List<Map<?, ?>> queue = queuesConfig.getMapList(playerName);
             List<Map<String, Object>> validEntries = new ArrayList<>();
 

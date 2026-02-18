@@ -1,12 +1,13 @@
 package net.enabify.recon.config;
 
-import net.enabify.recon.Recon;
-import org.bukkit.configuration.file.FileConfiguration;
-
+import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Logger;
 
 /**
  * config.yml の管理クラス
@@ -14,7 +15,8 @@ import java.util.Locale;
  */
 public class ConfigManager {
 
-    private final Recon plugin;
+    private final File dataFolder;
+    private final Logger logger;
 
     private boolean allowSelfRegistration;
     private boolean autoRegistration;
@@ -29,8 +31,9 @@ public class ConfigManager {
     private boolean migrateUsersFromYamlOnFirstRun;
     private DatabaseSettings databaseSettings;
 
-    public ConfigManager(Recon plugin) {
-        this.plugin = plugin;
+    public ConfigManager(File dataFolder, Logger logger) {
+        this.dataFolder = dataFolder;
+        this.logger = logger;
         loadConfig();
     }
 
@@ -38,9 +41,8 @@ public class ConfigManager {
      * config.ymlを読み込む（デフォルト値の保存含む）
      */
     public void loadConfig() {
-        plugin.saveDefaultConfig();
-        plugin.reloadConfig();
-        FileConfiguration config = plugin.getConfig();
+        saveDefaultConfig();
+        SimpleYamlConfig config = SimpleYamlConfig.load(new File(dataFolder, "config.yml"));
 
         this.allowSelfRegistration = config.getBoolean("allow-self-registration", false);
         this.autoRegistration = config.getBoolean("auto-registration", false);
@@ -252,7 +254,24 @@ public class ConfigManager {
         }
     }
 
-    private String getStringWithFallback(FileConfiguration config,
+    /**
+     * デフォルトの config.yml をデータフォルダに保存する（存在しない場合のみ）
+     */
+    private void saveDefaultConfig() {
+        File configFile = new File(dataFolder, "config.yml");
+        if (!configFile.exists()) {
+            dataFolder.mkdirs();
+            try (InputStream in = getClass().getClassLoader().getResourceAsStream("config.yml")) {
+                if (in != null) {
+                    Files.copy(in, configFile.toPath());
+                }
+            } catch (Exception e) {
+                logger.warning("Failed to save default config.yml: " + e.getMessage());
+            }
+        }
+    }
+
+    private String getStringWithFallback(SimpleYamlConfig config,
                                          String primaryPath,
                                          String fallbackPath,
                                          String defaultValue) {
@@ -262,7 +281,7 @@ public class ConfigManager {
         return config.getString(fallbackPath, defaultValue);
     }
 
-    private int getIntWithFallback(FileConfiguration config,
+    private int getIntWithFallback(SimpleYamlConfig config,
                                    String primaryPath,
                                    String fallbackPath,
                                    int defaultValue) {
@@ -272,7 +291,7 @@ public class ConfigManager {
         return config.getInt(fallbackPath, defaultValue);
     }
 
-    private boolean getBooleanWithFallback(FileConfiguration config,
+    private boolean getBooleanWithFallback(SimpleYamlConfig config,
                                            String primaryPath,
                                            String fallbackPath,
                                            boolean defaultValue) {

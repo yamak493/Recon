@@ -1,15 +1,14 @@
 package net.enabify.recon.config;
 
-import net.enabify.recon.Recon;
-import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.YamlConfiguration;
-
 import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 public class LangManager {
 
@@ -17,19 +16,23 @@ public class LangManager {
     private static final Set<String> SUPPORTED_LANGUAGES = new HashSet<>(Arrays.asList(
             "en", "hi", "zh", "es", "ar", "fr", "ru", "pt", "id", "de", "ja"));
 
-    private final Recon plugin;
-    private YamlConfiguration langConfig;
-    private YamlConfiguration fallbackConfig;
+    private final File dataFolder;
+    private final ConfigManager configManager;
+    private final Logger logger;
+    private SimpleYamlConfig langConfig;
+    private SimpleYamlConfig fallbackConfig;
     private String language;
 
-    public LangManager(Recon plugin) {
-        this.plugin = plugin;
+    public LangManager(File dataFolder, ConfigManager configManager, Logger logger) {
+        this.dataFolder = dataFolder;
+        this.configManager = configManager;
+        this.logger = logger;
         reload();
     }
 
     public void reload() {
         ensureLangFiles();
-        String configured = plugin.getConfigManager().getLanguage();
+        String configured = configManager.getLanguage();
         if (configured == null || configured.trim().isEmpty()) {
             configured = DEFAULT_LANGUAGE;
         }
@@ -54,7 +57,22 @@ public class LangManager {
         if (value == null) {
             return key;
         }
-        return ChatColor.translateAlternateColorCodes('&', value);
+        return translateColorCodes(value);
+    }
+
+    /**
+     * &カラーコードを§に変換する（プラットフォーム非依存）
+     */
+    private static String translateColorCodes(String text) {
+        if (text == null) return null;
+        char[] chars = text.toCharArray();
+        for (int i = 0; i < chars.length - 1; i++) {
+            if (chars[i] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRr".indexOf(chars[i + 1]) > -1) {
+                chars[i] = '\u00a7';
+                chars[i + 1] = Character.toLowerCase(chars[i + 1]);
+            }
+        }
+        return new String(chars);
     }
 
     public String format(String key, Map<String, String> placeholders) {
@@ -71,20 +89,26 @@ public class LangManager {
     }
 
     private void ensureLangFiles() {
-        File langFolder = new File(plugin.getDataFolder(), "lang");
+        File langFolder = new File(dataFolder, "lang");
         if (!langFolder.exists()) {
             langFolder.mkdirs();
         }
         for (String code : SUPPORTED_LANGUAGES) {
             File file = new File(langFolder, code + ".yml");
             if (!file.exists()) {
-                plugin.saveResource("lang/" + code + ".yml", false);
+                try (InputStream in = getClass().getClassLoader().getResourceAsStream("lang/" + code + ".yml")) {
+                    if (in != null) {
+                        Files.copy(in, file.toPath());
+                    }
+                } catch (Exception e) {
+                    logger.warning("Failed to save language file: " + code + ".yml");
+                }
             }
         }
     }
 
-    private YamlConfiguration loadConfig(String code) {
-        File file = new File(new File(plugin.getDataFolder(), "lang"), code + ".yml");
-        return YamlConfiguration.loadConfiguration(file);
+    private SimpleYamlConfig loadConfig(String code) {
+        File file = new File(new File(dataFolder, "lang"), code + ".yml");
+        return SimpleYamlConfig.load(file);
     }
 }

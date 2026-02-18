@@ -1,27 +1,21 @@
 package net.enabify.recon.config.userstorage;
 
-import net.enabify.recon.Recon;
+import net.enabify.recon.config.SimpleYamlConfig;
 import net.enabify.recon.model.ReconUser;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * users.yml ベースのユーザー保存実装
  */
 public class YamlUserStorage implements UserStorage {
 
-    private final Recon plugin;
     private final File usersFile;
 
-    public YamlUserStorage(Recon plugin) {
-        this.plugin = plugin;
-        this.usersFile = new File(plugin.getDataFolder(), "users.yml");
+    public YamlUserStorage(File dataFolder) {
+        this.usersFile = new File(dataFolder, "users.yml");
     }
 
     @Override
@@ -40,20 +34,16 @@ public class YamlUserStorage implements UserStorage {
     @Override
     public Map<String, ReconUser> loadAllUsers() {
         Map<String, ReconUser> result = new HashMap<>();
-        YamlConfiguration usersConfig = YamlConfiguration.loadConfiguration(usersFile);
+        SimpleYamlConfig usersConfig = SimpleYamlConfig.load(usersFile);
 
-        for (String key : usersConfig.getKeys(false)) {
-            ConfigurationSection section = usersConfig.getConfigurationSection(key);
-            if (section == null) {
-                continue;
-            }
-
-            ReconUser user = new ReconUser(key, section.getString("password", ""));
-            user.setIpWhitelist(section.getStringList("ip-whitelist"));
-            user.setOp(section.getBoolean("op", false));
-            user.setQueue(section.getBoolean("queue", false));
-            user.setPlayer(section.getString("player", null));
-            user.setPermissions(section.getStringList("permissions"));
+        for (String key : usersConfig.getKeys()) {
+            String password = usersConfig.getString(key + ".password", "");
+            ReconUser user = new ReconUser(key, password);
+            user.setIpWhitelist(usersConfig.getStringList(key + ".ip-whitelist"));
+            user.setOp(usersConfig.getBoolean(key + ".op", false));
+            user.setQueue(usersConfig.getBoolean(key + ".queue", false));
+            user.setPlayer(usersConfig.getString(key + ".player", null));
+            user.setPermissions(usersConfig.getStringList(key + ".permissions"));
             result.put(key, user);
         }
 
@@ -62,7 +52,7 @@ public class YamlUserStorage implements UserStorage {
 
     @Override
     public void saveAllUsers(Collection<ReconUser> users) throws Exception {
-        YamlConfiguration usersConfig = new YamlConfiguration();
+        SimpleYamlConfig usersConfig = new SimpleYamlConfig();
 
         for (ReconUser user : users) {
             String key = user.getUser();

@@ -1,6 +1,5 @@
 package net.enabify.recon.config.userstorage;
 
-import net.enabify.recon.Recon;
 import net.enabify.recon.config.ConfigManager;
 import net.enabify.recon.model.ReconUser;
 
@@ -16,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 /**
  * MySQL / MariaDB ベースのユーザー保存実装
@@ -24,17 +24,17 @@ public class SqlUserStorage implements UserStorage {
 
     private static final String FIELD_DELIMITER = "\n";
 
-    private final Recon plugin;
+    private final Logger logger;
     private final ConfigManager.UserStorageType storageType;
     private final ConfigManager.DatabaseSettings databaseSettings;
     private final String tableName;
     private final String jdbcUrl;
     private final String driverClass;
 
-    public SqlUserStorage(Recon plugin,
+    public SqlUserStorage(Logger logger,
                           ConfigManager.UserStorageType storageType,
                           ConfigManager.DatabaseSettings databaseSettings) {
-        this.plugin = plugin;
+        this.logger = logger;
         this.storageType = storageType;
         this.databaseSettings = databaseSettings;
 

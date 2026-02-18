@@ -5,10 +5,10 @@ import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import net.enabify.recon.Recon;
 import net.enabify.recon.crypto.AESCrypto;
-import net.enabify.recon.execution.CommandRunner;
+import net.enabify.recon.execution.ExecutionResult;
 import net.enabify.recon.model.ReconUser;
+import net.enabify.recon.platform.ReconPlatform;
 
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -26,11 +26,11 @@ import java.util.UUID;
  */
 public class ReconHttpServer {
 
-    private final Recon plugin;
+    private final ReconPlatform plugin;
     private final HttpClient forwardingHttpClient;
     private HttpServer server;
 
-    public ReconHttpServer(Recon plugin) {
+    public ReconHttpServer(ReconPlatform plugin) {
         this.plugin = plugin;
         this.forwardingHttpClient = HttpClient.newHttpClient();
     }
@@ -44,7 +44,7 @@ public class ReconHttpServer {
         server.createContext("/", new ApiHandler());
         server.setExecutor(null); // デフォルトのexecutorを使用
         server.start();
-        plugin.getLogger().info("Recon HTTP server started on port " + port);
+        plugin.getPluginLogger().info("Recon HTTP server started on port " + port);
     }
 
     /**
@@ -53,7 +53,7 @@ public class ReconHttpServer {
     public void stop() {
         if (server != null) {
             server.stop(0);
-            plugin.getLogger().info("Recon HTTP server stopped.");
+            plugin.getPluginLogger().info("Recon HTTP server stopped.");
         }
     }
 
@@ -192,11 +192,11 @@ public class ReconHttpServer {
                 plugin.getReconLogger().logApiRequest(clientIp, userName, command, true);
 
                 // コマンド実行
-                CommandRunner.ExecutionResult result;
+                ExecutionResult result;
                 try {
-                    result = plugin.getCommandRunner().executeCommand(reconUser, command, queueEnabled);
+                    result = plugin.getCommandExecutionService().executeCommand(reconUser, command, queueEnabled);
                 } catch (Exception e) {
-                    plugin.getLogger().severe("Error executing command: " + e.getMessage());
+                    plugin.getPluginLogger().severe("Error executing command: " + e.getMessage());
                     sendErrorResponse(exchange, 500,
                             plugin.getLangManager().get("http.execute_error"));
                     return;
@@ -235,7 +235,7 @@ public class ReconHttpServer {
                 sendResponse(exchange, 200, responseJson.toString());
 
             } catch (Exception e) {
-                plugin.getLogger().severe("Unexpected error in HTTP handler: " + e.getMessage());
+                plugin.getPluginLogger().severe("Unexpected error in HTTP handler: " + e.getMessage());
                 try {
                     sendErrorResponse(exchange, 500, plugin.getLangManager().get("http.unexpected_error"));
                 } catch (IOException ignored) {
@@ -260,7 +260,7 @@ public class ReconHttpServer {
             try {
                 uri = buildForwardingUri(target);
             } catch (Exception e) {
-                plugin.getLogger().warning("Invalid request-forwarding target: " + target);
+                plugin.getPluginLogger().warning("Invalid request-forwarding target: " + target);
                 continue;
             }
 
@@ -272,7 +272,7 @@ public class ReconHttpServer {
             forwardingHttpClient
                     .sendAsync(request, HttpResponse.BodyHandlers.discarding())
                     .exceptionally(ex -> {
-                        plugin.getLogger().warning("Request forwarding failed for target " + target + ": " + ex.getMessage());
+                        plugin.getPluginLogger().warning("Request forwarding failed for target " + target + ": " + ex.getMessage());
                         return null;
                     });
         }

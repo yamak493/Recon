@@ -2,6 +2,7 @@ package net.enabify.recon.execution;
 
 import net.enabify.recon.Recon;
 import net.enabify.recon.model.ReconUser;
+import net.enabify.recon.platform.CommandExecutionService;
 import net.enabify.recon.util.SchedulerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  * キャプチャしたメッセージをresponseに格納して返す
  * 非同期メッセージにも対応するため、実行後数ティック待機してから結果を返す
  */
-public class CommandRunner {
+public class CommandRunner implements CommandExecutionService {
 
     private final Recon plugin;
 
@@ -28,18 +29,12 @@ public class CommandRunner {
 
     /**
      * コマンド実行結果
+     * @deprecated ExecutionResult クラスを使用してください
      */
-    public static class ExecutionResult {
-        public final boolean success;
-        public final String response;
-        public final String plainResponse;
-        public final String error;
-
-        public ExecutionResult(boolean success, String response, String plainResponse, String error) {
-            this.success = success;
-            this.response = response;
-            this.plainResponse = plainResponse;
-            this.error = error;
+    @Deprecated
+    public static class DeprecatedExecutionResult extends ExecutionResult {
+        public DeprecatedExecutionResult(boolean success, String response, String plainResponse, String error) {
+            super(success, response, plainResponse, error);
         }
     }
 
@@ -56,6 +51,7 @@ public class CommandRunner {
      * @param queue     プレイヤーがオフライン時にキューに保存するか
      * @return 実行結果
      */
+    @Override
     public ExecutionResult executeCommand(ReconUser reconUser, String command, boolean queue) {
         if (reconUser.getPlayer() != null && !reconUser.getPlayer().isEmpty()) {
             // プレイヤーとして実行

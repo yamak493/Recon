@@ -1,16 +1,17 @@
 package net.enabify.recon.config;
 
-import net.enabify.recon.Recon;
 import net.enabify.recon.config.userstorage.SqlUserStorage;
 import net.enabify.recon.config.userstorage.UserStorage;
 import net.enabify.recon.config.userstorage.YamlUserStorage;
 import net.enabify.recon.model.ReconUser;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 /**
  * Reconユーザー情報の管理クラス
@@ -18,13 +19,17 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class UserManager {
 
-    private final Recon plugin;
+    private final File dataFolder;
+    private final ConfigManager configManager;
+    private final Logger logger;
     private UserStorage storage;
     private final Map<String, ReconUser> users = new ConcurrentHashMap<>();
 
-    public UserManager(Recon plugin) {
-        this.plugin = plugin;
-        this.storage = createStorage(plugin.getConfigManager());
+    public UserManager(File dataFolder, ConfigManager configManager, Logger logger) {
+        this.dataFolder = dataFolder;
+        this.configManager = configManager;
+        this.logger = logger;
+        this.storage = createStorage(configManager);
         initializeStorage();
     }
 
@@ -32,7 +37,7 @@ public class UserManager {
      * 設定再読み込み時に、ストレージ種別変更を反映する
      */
     public synchronized void reloadStorageBackend() {
-        this.storage = createStorage(plugin.getConfigManager());
+        this.storage = createStorage(configManager);
         initializeStorage();
     }
 
@@ -42,20 +47,20 @@ public class UserManager {
             loadUsers();
 
             if (storage.isDatabaseBackend()
-                    && plugin.getConfigManager().isMigrateUsersFromYamlOnFirstRun()) {
+                    && configManager.isMigrateUsersFromYamlOnFirstRun()) {
                 migrateFromYamlIfNeeded();
             }
         } catch (Exception e) {
-            plugin.getLogger().severe("Failed to initialize user storage '"
+            logger.severe("Failed to initialize user storage '"
                     + storage.getBackendName() + "': " + e.getMessage());
-            plugin.getLogger().warning("Falling back to YAML user storage.");
+            logger.warning("Falling back to YAML user storage.");
 
-            this.storage = new YamlUserStorage(plugin);
+            this.storage = new YamlUserStorage(dataFolder);
             try {
                 this.storage.initialize();
                 loadUsers();
             } catch (Exception fallbackEx) {
-                plugin.getLogger().severe("Failed to initialize fallback YAML storage: "
+                logger.severe("Failed to initialize fallback YAML storage: "
                         + fallbackEx.getMessage());
             }
         }
@@ -65,9 +70,9 @@ public class UserManager {
         ConfigManager.UserStorageType storageType = configManager.getUserStorageType();
         if (storageType == ConfigManager.UserStorageType.MYSQL
                 || storageType == ConfigManager.UserStorageType.MARIADB) {
-            return new SqlUserStorage(plugin, storageType, configManager.getDatabaseSettings());
+            return new SqlUserStorage(logger, storageType, configManager.getDatabaseSettings());
         }
-        return new YamlUserStorage(plugin);
+        return new YamlUserStorage(dataFolder);
     }
 
     private void migrateFromYamlIfNeeded() {
@@ -76,7 +81,7 @@ public class UserManager {
         }
 
         try {
-            YamlUserStorage yamlStorage = new YamlUserStorage(plugin);
+            YamlUserStorage yamlStorage = new YamlUserStorage(dataFolder);
             yamlStorage.initialize();
             Map<String, ReconUser> yamlUsers = yamlStorage.loadAllUsers();
             if (yamlUsers.isEmpty()) {
@@ -86,10 +91,10 @@ public class UserManager {
             storage.saveAllUsers(yamlUsers.values());
             users.clear();
             users.putAll(yamlUsers);
-            plugin.getLogger().info("Imported " + yamlUsers.size()
+            logger.info("Imported " + yamlUsers.size()
                     + " user(s) from users.yml to " + storage.getBackendName() + " storage.");
         } catch (Exception e) {
-            plugin.getLogger().warning("Failed to import users.yml into database storage: "
+            logger.warning("Failed to import users.yml into database storage: "
                     + e.getMessage());
         }
     }
@@ -103,7 +108,7 @@ public class UserManager {
             users.clear();
             users.putAll(loadedUsers);
         } catch (Exception e) {
-            plugin.getLogger().severe("Failed to load users from "
+            logger.severe("Failed to load users from "
                     + storage.getBackendName() + ": " + e.getMessage());
         }
     }
@@ -115,7 +120,7 @@ public class UserManager {
         try {
             storage.saveAllUsers(new ArrayList<>(users.values()));
         } catch (Exception e) {
-            plugin.getLogger().severe("Failed to save users to "
+            logger.severe("Failed to save users to "
                     + storage.getBackendName() + ": " + e.getMessage());
         }
     }
@@ -140,7 +145,7 @@ public class UserManager {
             } else {
                 users.put(previous.getUser(), previous);
             }
-            plugin.getLogger().severe("Failed to upsert user '" + user.getUser() + "' to "
+            logger.severe("Failed to upsert user '" + user.getUser() + "' to "
                     + storage.getBackendName() + ": " + e.getMessage());
         }
     }
@@ -158,7 +163,7 @@ public class UserManager {
             storage.deleteUser(username);
         } catch (Exception e) {
             users.put(username, previous);
-            plugin.getLogger().severe("Failed to delete user '" + username + "' from "
+            logger.severe("Failed to delete user '" + username + "' from "
                     + storage.getBackendName() + ": " + e.getMessage());
         }
     }

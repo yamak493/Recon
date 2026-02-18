@@ -1,0 +1,10 @@
+{
+  "id": "recon",
+  "name": "Recon",
+  "version": "${project.version}",
+  "main": "net.enabify.recon.proxy.velocity.ReconVelocity",
+  "description": "Reliable REST API alternative to Minecraft RCON",
+  "authors": [
+    "Enabify"
+  ]
+}

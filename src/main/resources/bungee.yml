@@ -1,0 +1,5 @@
+name: Recon
+main: net.enabify.recon.proxy.bungeecord.ReconBungee
+version: ${project.version}
+author: Enabify
+description: Reliable REST API alternative to Minecraft RCON
