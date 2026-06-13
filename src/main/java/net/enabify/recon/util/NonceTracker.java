@@ -20,9 +20,19 @@ public class NonceTracker {
      * @return true: 使用可能（未使用）, false: 使用不可（既に使用済み）
      */
     public boolean useNonce(String nonce) {
-        cleanup();
-        Long existing = usedNonces.putIfAbsent(nonce, System.currentTimeMillis());
-        return existing == null;
+        long now = System.currentTimeMillis();
+        Long existing = usedNonces.putIfAbsent(nonce, now);
+        if (existing == null) {
+            // 未使用のnonce
+            return true;
+        }
+        // 既に記録があるが、期限切れであれば再利用を許可しタイムスタンプを更新する。
+        // 毎回の全件スキャン（O(n)）を避け、エントリ単位で期限を判定する。
+        // 期限切れ要素の最終的な削除は定期実行の cleanup() に委譲する。
+        if (now - existing > NONCE_EXPIRY_MS) {
+            return usedNonces.replace(nonce, existing, now);
+        }
+        return false;
     }
 
     /**

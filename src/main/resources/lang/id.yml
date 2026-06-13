@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "Pemain '{player}' sedang offline dan antre
 http.only_post: "Hanya permintaan POST ke / yang diterima."
 http.only_root: "Hanya endpoint root (/) yang didukung."
 http.rate_limited: "Batas laju terlampaui. Silakan coba lagi nanti."
+http.body_too_large: "Badan permintaan terlalu besar."
 http.invalid_json: "Format JSON tidak valid."
 http.missing_required_fields: "Kolom wajib hilang: user, nonce, timestamp, command"
 http.auth_user_not_found: "Autentikasi gagal. Pengguna tidak ditemukan."

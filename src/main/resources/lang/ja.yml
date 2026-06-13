@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "プレイヤー '{player}' はオフライ
 http.only_post: "/ へのPOSTリクエストのみ受け付けます。"
 http.only_root: "ルートエンドポイント (/) のみ対応しています。"
 http.rate_limited: "レート制限を超えました。後でもう一度お試しください。"
+http.body_too_large: "リクエストボディが大きすぎます。"
 http.invalid_json: "無効なJSON形式です。"
 http.missing_required_fields: "必須フィールドが不足しています: user, nonce, timestamp, command"
 http.auth_user_not_found: "認証に失敗しました。ユーザーが見つかりません。"

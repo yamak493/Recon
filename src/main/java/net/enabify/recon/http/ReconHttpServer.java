@@ -17,8 +17,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * REST APIを提供するHTTPサーバー
@@ -26,13 +31,22 @@ import java.util.UUID;
  */
 public class ReconHttpServer {
 
+    /** リクエストボディの最大サイズ（バイト）。巨大POSTによるメモリ枯渇DoSを防止する */
+    private static final int MAX_BODY_BYTES = 256 * 1024;
+
+    /** 転送ループ防止用ヘッダー。このヘッダーが付いたリクエストは再転送しない */
+    private static final String FORWARDED_HEADER = "X-Recon-Forwarded";
+
     private final ReconPlatform plugin;
     private final HttpClient forwardingHttpClient;
     private HttpServer server;
+    private ExecutorService httpExecutor;
 
     public ReconHttpServer(ReconPlatform plugin) {
         this.plugin = plugin;
-        this.forwardingHttpClient = HttpClient.newHttpClient();
+        this.forwardingHttpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
     }
 
     /**
@@ -40,11 +54,46 @@ public class ReconHttpServer {
      */
     public void start() throws IOException {
         int port = plugin.getConfigManager().getPort();
-        server = HttpServer.create(new InetSocketAddress(port), 0);
+        String bindAddress = plugin.getConfigManager().getBindAddress();
+
+        InetSocketAddress address;
+        if (bindAddress == null || bindAddress.trim().isEmpty()) {
+            address = new InetSocketAddress(port);
+        } else {
+            address = new InetSocketAddress(bindAddress.trim(), port);
+        }
+
+        server = HttpServer.create(address, 0);
         server.createContext("/", new ApiHandler());
-        server.setExecutor(null); // デフォルトのexecutorを使用
+
+        // 境界付きスレッドプールを使用してリクエストを並行処理する。
+        // setExecutor(null) の既定動作はディスパッチスレッド上での直列実行となり、
+        // 1リクエストの最大10秒ブロックが他の全リクエストを停止させてしまうため避ける。
+        this.httpExecutor = createHttpExecutor();
+        server.setExecutor(httpExecutor);
         server.start();
-        plugin.getPluginLogger().info("Recon HTTP server started on port " + port);
+        plugin.getPluginLogger().info("Recon HTTP server started on "
+                + (bindAddress == null || bindAddress.trim().isEmpty() ? "*" : bindAddress.trim())
+                + ":" + port);
+    }
+
+    /**
+     * リクエスト処理用の境界付きスレッドプールを生成する
+     */
+    private ExecutorService createHttpExecutor() {
+        int cores = Math.max(2, Runtime.getRuntime().availableProcessors());
+        int maxThreads = Math.min(64, cores * 4);
+        ThreadFactory factory = new ThreadFactory() {
+            private final AtomicInteger counter = new AtomicInteger(1);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r, "Recon-HTTP-" + counter.getAndIncrement());
+                thread.setDaemon(true);
+                return thread;
+            }
+        };
+        return Executors.newFixedThreadPool(maxThreads, factory);
     }
 
     /**
@@ -54,6 +103,15 @@ public class ReconHttpServer {
         if (server != null) {
             server.stop(0);
             plugin.getPluginLogger().info("Recon HTTP server stopped.");
+        }
+        if (httpExecutor != null) {
+            httpExecutor.shutdownNow();
+        }
+        // 転送用HTTPクライアントのスレッドを解放する
+        try {
+            forwardingHttpClient.close();
+        } catch (Throwable ignored) {
+            // close() 非対応ランタイムやクローズ失敗は致命的ではない
         }
     }
 
@@ -87,11 +145,14 @@ public class ReconHttpServer {
                     return;
                 }
 
-                // リクエストボディを読み取り
-                String body = readRequestBody(exchange);
-
-                // 設定された転送先へリクエストを非同期一斉転送（レスポンスは待たない）
-                forwardRequestAsync(body);
+                // リクエストボディを読み取り（サイズ上限あり）
+                String body;
+                try {
+                    body = readRequestBody(exchange);
+                } catch (RequestTooLargeException tooLarge) {
+                    sendErrorResponse(exchange, 413, plugin.getLangManager().get("http.body_too_large"));
+                    return;
+                }
 
                 // JSONパース
                 JsonObject requestJson;
@@ -108,6 +169,13 @@ public class ReconHttpServer {
                     sendErrorResponse(exchange, 400,
                         plugin.getLangManager().get("http.missing_required_fields"));
                     return;
+                }
+
+                // 構造的に正当なリクエストのみを転送先へ非同期一斉転送（レスポンスは待たない）。
+                // 転送によるループを防ぐため、転送由来のリクエストは再転送しない。
+                boolean alreadyForwarded = exchange.getRequestHeaders().containsKey(FORWARDED_HEADER);
+                if (!alreadyForwarded) {
+                    forwardRequestAsync(body);
                 }
 
                 String userName = requestJson.get("user").getAsString();
@@ -266,6 +334,8 @@ public class ReconHttpServer {
 
             HttpRequest request = HttpRequest.newBuilder(uri)
                     .header("Content-Type", "application/json; charset=UTF-8")
+                    .header(FORWARDED_HEADER, "true")
+                    .timeout(Duration.ofSeconds(10))
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                     .build();
 
@@ -293,19 +363,29 @@ public class ReconHttpServer {
     }
 
     /**
-     * リクエストボディを文字列として読み取る
+     * リクエストボディを文字列として読み取る（最大サイズを超えた場合は例外を投げる）
      */
     private String readRequestBody(HttpExchange exchange) throws IOException {
         try (InputStream is = exchange.getRequestBody();
-             BufferedReader reader = new BufferedReader(
-                     new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
+             ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+            byte[] chunk = new byte[8192];
+            int read;
+            int total = 0;
+            while ((read = is.read(chunk)) != -1) {
+                total += read;
+                if (total > MAX_BODY_BYTES) {
+                    throw new RequestTooLargeException();
+                }
+                buffer.write(chunk, 0, read);
             }
-            return sb.toString();
+            return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
         }
+    }
+
+    /**
+     * リクエストボディがサイズ上限を超えたことを示す内部例外
+     */
+    private static class RequestTooLargeException extends IOException {
     }
 
     /**

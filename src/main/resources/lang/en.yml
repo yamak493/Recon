@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "Player '{player}' is offline and queue is 
 http.only_post: "Only POST requests to / are accepted."
 http.only_root: "Only root endpoint (/) is supported."
 http.rate_limited: "Rate limit exceeded. Please try again later."
+http.body_too_large: "Request body too large."
 http.invalid_json: "Invalid JSON format."
 http.missing_required_fields: "Missing required fields: user, nonce, timestamp, command"
 http.auth_user_not_found: "Authentication failed. User not found."

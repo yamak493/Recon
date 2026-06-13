@@ -28,6 +28,7 @@ public class ConfigManager {
     private boolean allowSelfRegistration;
     private boolean autoRegistration;
     private int port;
+    private String bindAddress;
     private List<String> globalIpWhitelist;
     private List<String> requestForwardingTargets;
     private boolean allowQueueForAllUsers;
@@ -160,6 +161,7 @@ public class ConfigManager {
         this.allowSelfRegistration = config.getBoolean("allow-self-registration", false);
         this.autoRegistration = config.getBoolean("auto-registration", false);
         this.port = config.getInt("port", 4161);
+        this.bindAddress = config.getString("bind-address", "");
         this.globalIpWhitelist = config.getStringList("global-ip-whitelist");
         if (this.globalIpWhitelist == null) {
             this.globalIpWhitelist = new ArrayList<>();
@@ -236,6 +238,14 @@ public class ConfigManager {
 
     public int getPort() {
         return port;
+    }
+
+    /**
+     * HTTPサーバーのバインドアドレスを取得する。
+     * 空文字の場合は全インターフェース（0.0.0.0）にバインドする。
+     */
+    public String getBindAddress() {
+        return bindAddress;
     }
 
     public List<String> getGlobalIpWhitelist() {

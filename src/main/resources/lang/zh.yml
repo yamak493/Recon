@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "玩家 '{player}' 离线且队列已禁用
 http.only_post: "仅接受对 / 的 POST 请求。"
 http.only_root: "仅支持根端点 (/)。"
 http.rate_limited: "超过速率限制。请稍后再试。"
+http.body_too_large: "请求体过大。"
 http.invalid_json: "无效的 JSON 格式。"
 http.missing_required_fields: "缺少必填字段: user, nonce, timestamp, command"
 http.auth_user_not_found: "认证失败。未找到用户。"

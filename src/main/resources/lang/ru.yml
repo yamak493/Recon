@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "Игрок '{player}' не в сети, и
 http.only_post: "Разрешены только POST-запросы на /."
 http.only_root: "Поддерживается только корневой endpoint (/)."
 http.rate_limited: "Превышен лимит запросов. Попробуйте позже."
+http.body_too_large: "Тело запроса слишком большое."
 http.invalid_json: "Неверный формат JSON."
 http.missing_required_fields: "Отсутствуют обязательные поля: user, nonce, timestamp, command"
 http.auth_user_not_found: "Ошибка аутентификации. Пользователь не найден."

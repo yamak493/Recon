@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "Der Spieler '{player}' ist offline und die
 http.only_post: "Nur POST-Anfragen an / werden akzeptiert."
 http.only_root: "Nur der Root-Endpunkt (/) wird unterstutzt."
 http.rate_limited: "Rate-Limit uberschritten. Bitte spater erneut versuchen."
+http.body_too_large: "Anfrage-Body zu groß."
 http.invalid_json: "Ungultiges JSON-Format."
 http.missing_required_fields: "Erforderliche Felder fehlen: user, nonce, timestamp, command"
 http.auth_user_not_found: "Authentifizierung fehlgeschlagen. Benutzer nicht gefunden."

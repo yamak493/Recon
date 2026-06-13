@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "खिलाड़ी '{player}' ऑफ़
 http.only_post: "/ पर केवल POST अनुरोध स्वीकार किए जाते हैं।"
 http.only_root: "केवल रूट एंडपॉइंट (/) समर्थित है।"
 http.rate_limited: "रेट लिमिट पार हो गई है। कृपया बाद में प्रयास करें।"
+http.body_too_large: "अनुरोध का मुख्य भाग बहुत बड़ा है।"
 http.invalid_json: "अमान्य JSON प्रारूप।"
 http.missing_required_fields: "आवश्यक फ़ील्ड गायब हैं: user, nonce, timestamp, command"
 http.auth_user_not_found: "प्रमाणीकरण विफल। उपयोगकर्ता नहीं मिला।"

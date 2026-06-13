@@ -43,7 +43,7 @@ public class QueueManager {
     /**
      * queues.ymlを読み込む
      */
-    public void loadQueues() {
+    public synchronized void loadQueues() {
         if (!queuesFile.exists()) {
             try {
                 queuesFile.getParentFile().mkdirs();
@@ -58,7 +58,7 @@ public class QueueManager {
     /**
      * queues.ymlに保存する
      */
-    public void saveQueues() {
+    public synchronized void saveQueues() {
         try {
             queuesConfig.save(queuesFile);
         } catch (IOException e) {
@@ -73,7 +73,7 @@ public class QueueManager {
      * @param command    実行するコマンド
      * @param userName   リクエスト元ユーザー名
      */
-    public void addToQueue(String playerName, String command, String userName) {
+    public synchronized void addToQueue(String playerName, String command, String userName) {
         List<Map<String, Object>> queue = getQueueList(playerName);
         Map<String, Object> entry = new LinkedHashMap<>();
         entry.put("command", command);
@@ -91,7 +91,7 @@ public class QueueManager {
      * @param playerName 対象プレイヤー名
      * @return キューに溜まっていたコマンドのリスト
      */
-    public List<QueuedCommand> getAndClearQueue(String playerName) {
+    public synchronized List<QueuedCommand> getAndClearQueue(String playerName) {
         cleanExpiredEntries();
 
         List<QueuedCommand> result = new ArrayList<>();
@@ -117,7 +117,7 @@ public class QueueManager {
      * 期限切れのエントリを削除
      * config.ymlのqueue-expiry-hours設定に基づいて古いキューを削除する
      */
-    public void cleanExpiredEntries() {
+    public synchronized void cleanExpiredEntries() {
         long expiryHours = configManager.getQueueExpiryHours();
         long expirySeconds = expiryHours * 3600L;
         long now = System.currentTimeMillis() / 1000L;

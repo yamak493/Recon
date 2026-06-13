@@ -4,6 +4,7 @@ import net.enabify.recon.Recon;
 import net.enabify.recon.config.QueueManager;
 import net.enabify.recon.model.ReconUser;
 import net.enabify.recon.util.SchedulerUtil;
+import net.enabify.recon.util.SecureToken;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -12,7 +13,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * プレイヤー参加時にキューに溜まったコマンドを実行するリスナー
@@ -80,8 +80,8 @@ public class PlayerJoinListener implements Listener {
             return;
         }
 
-        // パスワードをランダム生成 (8桁)
-        String password = UUID.randomUUID().toString().substring(0, 8);
+        // パスワードを暗号学的に安全なランダム生成 (20文字)
+        String password = SecureToken.generate(20);
         ReconUser newUser = new ReconUser(playerName, password);
         newUser.setPlayer(playerName);
 

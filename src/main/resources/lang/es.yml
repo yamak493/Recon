@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "El jugador '{player}' está desconectado y
 http.only_post: "Solo se aceptan solicitudes POST a /."
 http.only_root: "Solo se admite el endpoint raíz (/)."
 http.rate_limited: "Se excedió el límite de tasa. Inténtalo de nuevo más tarde."
+http.body_too_large: "El cuerpo de la solicitud es demasiado grande."
 http.invalid_json: "Formato JSON no válido."
 http.missing_required_fields: "Faltan campos obligatorios: user, nonce, timestamp, command"
 http.auth_user_not_found: "Autenticación fallida. Usuario no encontrado."

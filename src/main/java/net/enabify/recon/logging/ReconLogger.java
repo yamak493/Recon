@@ -29,7 +29,7 @@ public class ReconLogger {
      *
      * @param message ログメッセージ
      */
-    public void log(String message) {
+    public synchronized void log(String message) {
         String date = dateFormat.format(new Date());
         String time = timeFormat.format(new Date());
         File logFile = new File(logFolder, date + ".log");

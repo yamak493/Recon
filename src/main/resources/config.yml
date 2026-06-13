@@ -15,6 +15,12 @@ auto-registration: false
 # HTTP server port
 port: 4161
 
+# HTTP server bind address
+# Leave empty to listen on all network interfaces (0.0.0.0).
+# Set to "127.0.0.1" to only accept connections from the local machine
+# (recommended when Recon is placed behind a reverse proxy / TLS terminator).
+bind-address: ""
+
 # Global IP whitelist (applies to all users)
 # Leave empty to allow all IPs
 global-ip-whitelist: []

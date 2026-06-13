@@ -90,6 +90,7 @@ error.player_offline_queue_disabled: "Le joueur '{player}' est hors ligne et la 
 http.only_post: "Seules les requetes POST vers / sont acceptees."
 http.only_root: "Seul l'endpoint racine (/) est pris en charge."
 http.rate_limited: "Limite de debit depassee. Veuillez reessayer plus tard."
+http.body_too_large: "Corps de la requête trop volumineux."
 http.invalid_json: "Format JSON invalide."
 http.missing_required_fields: "Champs requis manquants: user, nonce, timestamp, command"
 http.auth_user_not_found: "Authentification echouee. Utilisateur introuvable."

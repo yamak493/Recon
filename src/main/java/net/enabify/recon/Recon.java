@@ -44,16 +44,6 @@ public final class Recon extends JavaPlugin implements ReconPlatform {
         getLogger().info("  REST API for Minecraft");
         getLogger().info("==============================");
 
-        // You can find the plugin id of your plugins on
-        // the page https://bstats.org/what-is-my-plugin-id
-        int pluginId = 29597;
-        Metrics metrics = new Metrics(this, pluginId);
-
-        // Optional: Add custom charts
-        metrics.addCustomChart(
-            new SimplePie("chart_id", () -> "My value")
-        );
-
         // Folia検出
         if (SchedulerUtil.isFolia()) {
             getLogger().info("Folia detected. Using region-aware scheduling.");
@@ -66,6 +56,14 @@ public final class Recon extends JavaPlugin implements ReconPlatform {
         queueManager = new QueueManager(getDataFolder(), configManager, getLogger());
 
         getLogger().info("User storage backend: " + userManager.getStorageBackendName());
+
+        // bStats メトリクス（プラグインID: https://bstats.org/what-is-my-plugin-id 参照）
+        int pluginId = 29597;
+        Metrics metrics = new Metrics(this, pluginId);
+        metrics.addCustomChart(new SimplePie("storage_backend",
+                () -> userManager.getStorageBackendName()));
+        metrics.addCustomChart(new SimplePie("scheduler_type",
+                () -> SchedulerUtil.isFolia() ? "Folia" : "Bukkit"));
 
         // ユーティリティ初期化
         reconLogger = new ReconLogger(getDataFolder());
