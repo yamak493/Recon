@@ -194,17 +194,13 @@ class Recon {
   /// Encrypt with AES-256-GCM. Returns Base64(IV(12) + ciphertext + tag(16)).
   String _encryptGcm(String plaintext, Uint8List key, String aad) {
     final iv = _secureRandomBytes(12);
-    final cipher = pc.GCMBlockCipher(pc.AESEngine())
-      ..init(
-        true,
-        pc.AEADParameters(
-          pc.KeyParameter(key),
-          128,
-          iv,
-          Uint8List.fromList(utf8.encode(aad)),
-        ),
-      );
-    final ctWithTag = cipher.process(Uint8List.fromList(utf8.encode(plaintext)));
+    final ctWithTag = _gcm(
+      forEncryption: true,
+      key: key,
+      iv: iv,
+      aad: Uint8List.fromList(utf8.encode(aad)),
+      input: Uint8List.fromList(utf8.encode(plaintext)),
+    );
     final combined = Uint8List(iv.length + ctWithTag.length)
       ..setRange(0, iv.length, iv)
       ..setRange(iv.length, iv.length + ctWithTag.length, ctWithTag);
@@ -216,18 +212,34 @@ class Recon {
     final decoded = base64Decode(ciphertext);
     final iv = Uint8List.fromList(decoded.sublist(0, 12));
     final ctWithTag = Uint8List.fromList(decoded.sublist(12));
+    final plain = _gcm(
+      forEncryption: false,
+      key: key,
+      iv: iv,
+      aad: Uint8List.fromList(utf8.encode(aad)),
+      input: ctWithTag,
+    );
+    return utf8.decode(plain);
+  }
+
+  /// Run AES-256-GCM via pointycastle using the explicit AEAD API
+  /// (processBytes + doFinal). On decryption a tag mismatch throws.
+  Uint8List _gcm({
+    required bool forEncryption,
+    required Uint8List key,
+    required Uint8List iv,
+    required Uint8List aad,
+    required Uint8List input,
+  }) {
     final cipher = pc.GCMBlockCipher(pc.AESEngine())
       ..init(
-        false,
-        pc.AEADParameters(
-          pc.KeyParameter(key),
-          128,
-          iv,
-          Uint8List.fromList(utf8.encode(aad)),
-        ),
+        forEncryption,
+        pc.AEADParameters(pc.KeyParameter(key), 128, iv, aad),
       );
-    final plain = cipher.process(ctWithTag);
-    return utf8.decode(plain);
+    final output = Uint8List(cipher.getOutputSize(input.length));
+    var len = cipher.processBytes(input, 0, input.length, output, 0);
+    len += cipher.doFinal(output, len);
+    return Uint8List.fromList(output.sublist(0, len));
   }
 
   // --- v1 (legacy): SHA-256 + AES-256-CBC ---
