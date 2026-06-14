@@ -41,38 +41,81 @@ Notes:
 - `migrate-from-yaml-on-first-run: true` imports existing `users.yml` data into DB when DB table is empty.
 - `/recon reload` also applies backend type changes and reconnects user storage.
 
+## Security & Protocols
+
+Recon protects every command and response with application-layer encryption, so it
+provides meaningful security **even without a TLS certificate**. Two protocols are supported:
+
+| | **v2 (recommended, default)** | v1 (legacy) |
+|---|---|---|
+| Cipher | **AES-256-GCM** (authenticated encryption) | AES-256-CBC (no authentication) |
+| Key derivation | **PBKDF2-HMAC-SHA256** (configurable iterations) | single SHA-256 |
+| Tamper detection | ✅ GCM auth tag | ❌ |
+| Metadata binding | ✅ `user`/`nonce`/`timestamp` bound as AAD | ❌ |
+| Brute-force resistance | ✅ slow KDF | ❌ fast hash |
+| Mutual authentication | ✅ response proves the server knows the password | ❌ |
+
+**Why v2 is secure without TLS:**
+- **AES-256-GCM** detects any tampering of the encrypted command/response (no padding-oracle).
+- **PBKDF2** makes offline password brute-force expensive even if traffic is sniffed.
+- The **AAD** binds `user`, `nonce`, and `timestamp` into the ciphertext, so a MITM cannot
+  alter them. Combined with nonce + timestamp replay protection, this gives strong protection
+  on a plain HTTP link.
+
+For maximum security, set `security.allow-legacy-protocol: false` in `config.yml` to require v2
+from all clients. You may still place Recon behind a TLS-terminating reverse proxy and/or bind it
+to `127.0.0.1` via `bind-address` for defense in depth.
+
 ## API Specification
 
 Recon listens for `POST` requests at the root path (`/`).
 
-### Request Body
+### Request Body (protocol v2)
 ```json
 {
   "user": "username",
+  "protocol": 2,
+  "iterations": 100000,
   "nonce": "random_string",
   "timestamp": 1234567890,
   "queue": true,
-  "command": "AES_ENCRYPTED_COMMAND"
+  "command": "AES_GCM_ENCRYPTED_COMMAND"
 }
 ```
 
-`queue` is optional and defaults to `false`.
+- `protocol`: `2` for the hardened protocol, `1` (or omit) for legacy.
+- `iterations` (v2 only): PBKDF2 iteration count. Must be `>=` the server's
+  `security.pbkdf2-iterations` floor and `<= 1000000`.
+- `queue` is optional and defaults to `false`.
+  - If `allow-queue-for-all-users: true` in `config.yml`, queue is enabled when request has `queue: true`.
+  - If `allow-queue-for-all-users: false`, request `queue: true` is ignored by default.
+  - Even when global setting is `false`, users with `queue: true` in `users.yml` can still use queue.
 
-- If `allow-queue-for-all-users: true` in `config.yml`, queue is enabled when request has `queue: true`.
-- If `allow-queue-for-all-users: false`, request `queue: true` is ignored by default.
-- Even when global setting is `false`, users with `queue: true` in `users.yml` can still use queue.
+**Protocol v2 cryptography**
+- Key: `PBKDF2-HMAC-SHA256(password, salt = "<nonce>_<timestamp>", iterations, 32 bytes)`
+- Cipher: `AES-256-GCM` with a random 12-byte IV and 128-bit tag
+- AAD: `"<user>|<nonce>|<timestamp>"`
+- Wire format of `command`/`response`: `Base64( IV(12) ‖ ciphertext ‖ tag(16) )`
+
+Legacy v1 uses `SHA-256(password_nonce_timestamp)` + AES-256-CBC with `Base64( IV(16) ‖ ciphertext )`.
 
 ### Response Body
 ```json
 {
   "user": "username",
+  "protocol": 2,
+  "iterations": 100000,
   "nonce": "server_random_string",
   "timestamp": 1234567890,
   "success": true,
-  "response": "AES_ENCRYPTED_RESPONSE",
+  "response": "AES_GCM_ENCRYPTED_RESPONSE",
+  "plainResponse": "AES_GCM_ENCRYPTED_RESPONSE_NO_COLOR",
   "error": "Error message (only if success is false)"
 }
 ```
+
+The response is encrypted with the same protocol using the server's `nonce`/`timestamp`
+(and echoed `iterations` for v2), so the client can verify the server's authenticity.
 
 ## Commands
 

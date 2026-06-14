@@ -2,7 +2,12 @@
  * Recon - REST API Client for Minecraft
  *
  * A TypeScript client library for communicating with the Recon plugin's REST API.
- * Handles AES-256-CBC encryption/decryption and secure command execution.
+ *
+ * Supports two protocols:
+ *   - v2 (default, recommended): AES-256-GCM (authenticated) + PBKDF2-HMAC-SHA256.
+ *     Detects tampering and resists offline password brute-force, providing meaningful
+ *     security even WITHOUT TLS.
+ *   - v1 (legacy): AES-256-CBC + single SHA-256 key derivation (no authentication).
  *
  * @license MIT (Mobile application distribution prohibited)
  * @copyright 2026 Enabify
@@ -26,6 +31,10 @@ export interface ReconOptions {
     password: string;
     timeout?: number;
     useSSL?: boolean;
+    /** Protocol version: 2 (recommended) or 1 (legacy). Default: 2 */
+    protocol?: number;
+    /** PBKDF2 iterations for v2 (must meet the server floor). Default: 100000 */
+    iterations?: number;
 }
 
 export class Recon {
@@ -35,12 +44,14 @@ export class Recon {
     private readonly password: string;
     private readonly timeout: number;
     private readonly useSSL: boolean;
+    private readonly protocol: number;
+    private readonly iterations: number;
 
     /**
      * Create a new Recon client instance.
      */
     constructor(options: ReconOptions);
-    constructor(host: string, port?: number, user?: string, password?: string, timeout?: number, useSSL?: boolean);
+    constructor(host: string, port?: number, user?: string, password?: string, timeout?: number, useSSL?: boolean, protocol?: number, iterations?: number);
     constructor(
         hostOrOptions: string | ReconOptions,
         port: number = 4161,
@@ -48,6 +59,8 @@ export class Recon {
         password: string = '',
         timeout: number = 10000,
         useSSL: boolean = false,
+        protocol: number = 2,
+        iterations: number = 100000,
     ) {
         if (typeof hostOrOptions === 'object') {
             this.host = hostOrOptions.host;
@@ -56,6 +69,8 @@ export class Recon {
             this.password = hostOrOptions.password;
             this.timeout = hostOrOptions.timeout ?? 10000;
             this.useSSL = hostOrOptions.useSSL ?? false;
+            this.protocol = hostOrOptions.protocol ?? 2;
+            this.iterations = hostOrOptions.iterations ?? 100000;
         } else {
             this.host = hostOrOptions;
             this.port = port;
@@ -63,6 +78,8 @@ export class Recon {
             this.password = password;
             this.timeout = timeout;
             this.useSSL = useSSL;
+            this.protocol = protocol;
+            this.iterations = iterations;
         }
     }
 
@@ -76,29 +93,48 @@ export class Recon {
         try {
             const nonce = crypto.randomBytes(16).toString('hex');
             const timestamp = Math.floor(Date.now() / 1000);
+            const useV2 = this.protocol === 2;
 
-            const key = this.deriveKey(this.password, nonce, timestamp);
-            const encrypted = this.encrypt(`RCON_${command}`, key);
+            const aad = `${this.user}|${nonce}|${timestamp}`;
+            const key = useV2
+                ? this.deriveKeyV2(this.password, nonce, timestamp, this.iterations)
+                : this.deriveKey(this.password, nonce, timestamp);
+            const encrypted = useV2
+                ? this.encryptGcm(`RCON_${command}`, key, aad)
+                : this.encrypt(`RCON_${command}`, key);
 
-            const payload = JSON.stringify({
+            const request: Record<string, unknown> = {
                 user: this.user,
+                protocol: this.protocol,
                 nonce,
                 timestamp,
                 queue,
                 command: encrypted,
-            });
+            };
+            if (useV2) {
+                request.iterations = this.iterations;
+            }
 
-            const responseBody = await this.post(payload);
+            const responseBody = await this.post(JSON.stringify(request));
             const responseJson = JSON.parse(responseBody);
 
             if (responseJson.success) {
                 const serverNonce: string = responseJson.nonce || '';
                 const serverTimestamp: number = responseJson.timestamp || 0;
-                const responseKey = this.deriveKey(this.password, serverNonce, serverTimestamp);
-                const decrypted = this.decrypt(responseJson.response, responseKey);
-                const decryptedPlain = responseJson.plainResponse
-                    ? this.decrypt(responseJson.plainResponse, responseKey)
-                    : decrypted;
+                const respProtocol: number = responseJson.protocol || this.protocol;
+                const respV2 = respProtocol === 2;
+                const respIterations: number = responseJson.iterations || this.iterations;
+                const respAad = `${this.user}|${serverNonce}|${serverTimestamp}`;
+
+                const responseKey = respV2
+                    ? this.deriveKeyV2(this.password, serverNonce, serverTimestamp, respIterations)
+                    : this.deriveKey(this.password, serverNonce, serverTimestamp);
+                const dec = (ct: string): string => (respV2
+                    ? this.decryptGcm(ct, responseKey, respAad)
+                    : this.decrypt(ct, responseKey));
+
+                const decrypted = dec(responseJson.response);
+                const decryptedPlain = responseJson.plainResponse ? dec(responseJson.plainResponse) : decrypted;
 
                 return { success: true, response: decrypted, plainResponse: decryptedPlain, error: null };
             }
@@ -119,10 +155,36 @@ export class Recon {
         }
     }
 
+    // --- v2: PBKDF2 + AES-256-GCM ---
+
+    private deriveKeyV2(password: string, nonce: string, timestamp: number, iterations: number): Buffer {
+        return crypto.pbkdf2Sync(password, `${nonce}_${timestamp}`, iterations, 32, 'sha256');
+    }
+
+    private encryptGcm(plaintext: string, key: Buffer, aad: string): string {
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+        cipher.setAAD(Buffer.from(aad, 'utf8'));
+        const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+        const tag = cipher.getAuthTag();
+        return Buffer.concat([iv, ct, tag]).toString('base64');
+    }
+
+    private decryptGcm(ciphertext: string, key: Buffer, aad: string): string {
+        const raw = Buffer.from(ciphertext, 'base64');
+        const iv = raw.subarray(0, 12);
+        const tag = raw.subarray(raw.length - 16);
+        const ct = raw.subarray(12, raw.length - 16);
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+        decipher.setAAD(Buffer.from(aad, 'utf8'));
+        decipher.setAuthTag(tag);
+        return Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8');
+    }
+
+    // --- v1 (legacy): SHA-256 + AES-256-CBC ---
+
     private deriveKey(password: string, nonce: string, timestamp: number): Buffer {
-        return crypto.createHash('sha256')
-            .update(`${password}_${nonce}_${timestamp}`)
-            .digest();
+        return crypto.createHash('sha256').update(`${password}_${nonce}_${timestamp}`).digest();
     }
 
     private encrypt(plaintext: string, key: Buffer): string {
