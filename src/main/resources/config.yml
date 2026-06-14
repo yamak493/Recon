@@ -15,6 +15,12 @@ auto-registration: false
 # HTTP server port
 port: 4161
 
+# HTTP server bind address
+# Leave empty to listen on all network interfaces (0.0.0.0).
+# Set to "127.0.0.1" to only accept connections from the local machine
+# (recommended when Recon is placed behind a reverse proxy / TLS terminator).
+bind-address: ""
+
 # Global IP whitelist (applies to all users)
 # Leave empty to allow all IPs
 global-ip-whitelist: []
@@ -35,6 +41,28 @@ queue-expiry-hours: 72
 
 # Rate limit: maximum requests per minute from the same IP address
 rate-limit: 30
+
+# Security / protocol settings
+security:
+  # Protocol versions:
+  #   v1 (legacy): AES-256-CBC + single SHA-256 key derivation, no message authentication.
+  #   v2 (recommended): AES-256-GCM (authenticated encryption) + PBKDF2-HMAC-SHA256.
+  #     v2 detects tampering, binds metadata (user/nonce/timestamp) into the ciphertext,
+  #     and makes offline password brute-force expensive. This provides meaningful
+  #     security even WITHOUT a TLS certificate.
+  #
+  # Allow legacy v1 clients. Set to false to require v2 from every client.
+  # Recommended: false for new deployments (especially when not behind TLS).
+  allow-legacy-protocol: true
+  #
+  # Minimum PBKDF2 iteration count the server will accept for v2 (per request).
+  # The client sends its own iteration count; the server rejects anything below this
+  # floor (too weak) or above the internal hard cap of 1000000 (CPU-DoS protection).
+  # Higher = stronger against offline brute-force, but more CPU/latency per request.
+  # Auto-generated credentials are high-entropy, so 100000 is a strong default;
+  # raise it if you allow weak, user-chosen passwords (and raise it in clients too).
+  # Minimum enforced: 10000.
+  pbkdf2-iterations: 100000
 
 # Language code for messages
 # Supported: en, hi, zh, es, ar, fr, ru, pt, id, de, ja

@@ -1,7 +1,10 @@
 package net.enabify.recon.client;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -9,6 +12,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -16,7 +20,12 @@ import java.util.UUID;
  * Recon - REST API Client for Minecraft
  *
  * A Java client library for communicating with the Recon plugin's REST API.
- * Handles AES-256-CBC encryption/decryption and secure command execution.
+ *
+ * Supports two protocols:
+ *   - v2 (default, recommended): AES-256-GCM (authenticated) + PBKDF2-HMAC-SHA256.
+ *     Detects tampering and resists offline password brute-force, providing meaningful
+ *     security even WITHOUT TLS.
+ *   - v1 (legacy): AES-256-CBC + single SHA-256 key derivation (no authentication).
  *
  * @author Enabify
  * @license MIT (Mobile application distribution prohibited)
@@ -29,28 +38,35 @@ public class Recon {
     private final String password;
     private final int timeout;
     private final boolean useSSL;
+    private final int protocol;
+    private final int iterations;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /**
-     * Create a new Recon client instance.
-     *
-     * @param host     Server hostname or IP address
-     * @param port     Server port (default: 4161)
-     * @param user     Authentication username
-     * @param password Authentication password
-     * @param timeout  Request timeout in milliseconds (default: 10000)
+     * Create a new Recon client instance (protocol v2, 100000 iterations).
      */
     public Recon(String host, int port, String user, String password, int timeout) {
-        this(host, port, user, password, timeout, false);
+        this(host, port, user, password, timeout, false, 2, 100000);
     }
 
     public Recon(String host, int port, String user, String password, int timeout, boolean useSSL) {
+        this(host, port, user, password, timeout, useSSL, 2, 100000);
+    }
+
+    /**
+     * @param protocol   Protocol version: 2 (recommended) or 1 (legacy)
+     * @param iterations PBKDF2 iterations for v2 (must meet the server floor)
+     */
+    public Recon(String host, int port, String user, String password, int timeout,
+                 boolean useSSL, int protocol, int iterations) {
         this.host = host;
         this.port = port;
         this.user = user;
         this.password = password;
         this.timeout = timeout;
         this.useSSL = useSSL;
+        this.protocol = protocol;
+        this.iterations = iterations;
     }
 
     /**
@@ -64,15 +80,24 @@ public class Recon {
         try {
             String nonce = generateNonce();
             long timestamp = System.currentTimeMillis() / 1000L;
+            boolean useV2 = protocol == 2;
 
-            // Derive AES key and encrypt command
-            byte[] key = deriveKey(password, nonce, timestamp);
-            String encrypted = encrypt("RCON_" + command, key);
+            // Derive key and encrypt command (AAD binds metadata in v2)
+            String aad = buildAad(user, nonce, timestamp);
+            String encrypted;
+            if (useV2) {
+                byte[] key = deriveKeyV2(password, nonce, timestamp, iterations);
+                encrypted = encryptGcm("RCON_" + command, key, aad);
+            } else {
+                byte[] key = deriveKey(password, nonce, timestamp);
+                encrypted = encrypt("RCON_" + command, key);
+            }
 
             // Build JSON payload
+            String iterationsField = useV2 ? String.format(",\"iterations\":%d", iterations) : "";
             String payload = String.format(
-                    "{\"user\":\"%s\",\"nonce\":\"%s\",\"timestamp\":%d,\"queue\":%s,\"command\":\"%s\"}",
-                    escapeJson(user), escapeJson(nonce), timestamp, queue, escapeJson(encrypted));
+                    "{\"user\":\"%s\",\"protocol\":%d%s,\"nonce\":\"%s\",\"timestamp\":%d,\"queue\":%s,\"command\":\"%s\"}",
+                    escapeJson(user), protocol, iterationsField, escapeJson(nonce), timestamp, queue, escapeJson(encrypted));
 
             // Send HTTP POST
             String urlStr = String.format("%s://%s:%d/", useSSL ? "https" : "http", host, port);
@@ -110,14 +135,31 @@ public class Recon {
             if (success) {
                 String serverNonce = extractJsonValue(responseBody, "nonce");
                 long serverTimestamp = extractJsonLong(responseBody, "timestamp");
+                long respProtocolL = extractJsonLong(responseBody, "protocol");
+                int respProtocol = respProtocolL == 0 ? protocol : (int) respProtocolL;
+                boolean respV2 = respProtocol == 2;
+                long respIterL = extractJsonLong(responseBody, "iterations");
+                int respIterations = respIterL == 0 ? iterations : (int) respIterL;
+                String respAad = buildAad(user, serverNonce, serverTimestamp);
+
                 String encryptedResponse = extractJsonValue(responseBody, "response");
                 String encryptedPlainResponse = extractJsonValue(responseBody, "plainResponse");
 
-                byte[] responseKey = deriveKey(password, serverNonce, serverTimestamp);
-                String decrypted = decrypt(encryptedResponse, responseKey);
-                String decryptedPlain = encryptedPlainResponse != null 
-                    ? decrypt(encryptedPlainResponse, responseKey)
-                    : decrypted;
+                byte[] responseKey = respV2
+                        ? deriveKeyV2(password, serverNonce, serverTimestamp, respIterations)
+                        : deriveKey(password, serverNonce, serverTimestamp);
+
+                String decrypted = respV2
+                        ? decryptGcm(encryptedResponse, responseKey, respAad)
+                        : decrypt(encryptedResponse, responseKey);
+                String decryptedPlain;
+                if (encryptedPlainResponse != null) {
+                    decryptedPlain = respV2
+                            ? decryptGcm(encryptedPlainResponse, responseKey, respAad)
+                            : decrypt(encryptedPlainResponse, responseKey);
+                } else {
+                    decryptedPlain = decrypted;
+                }
 
                 return new ReconResponse(true, decrypted, decryptedPlain, null);
             }
@@ -129,7 +171,51 @@ public class Recon {
         }
     }
 
-    // --- Encryption utilities ---
+    private static String buildAad(String user, String nonce, long timestamp) {
+        return user + "|" + nonce + "|" + timestamp;
+    }
+
+    // --- v2: PBKDF2 + AES-256-GCM ---
+
+    private static byte[] deriveKeyV2(String password, String nonce, long timestamp, int iterations) throws Exception {
+        byte[] salt = (nonce + "_" + timestamp).getBytes(StandardCharsets.UTF_8);
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, 256);
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            return factory.generateSecret(spec).getEncoded();
+        } finally {
+            spec.clearPassword();
+        }
+    }
+
+    private static String encryptGcm(String plaintext, byte[] key, String aad) throws Exception {
+        byte[] iv = new byte[12];
+        RANDOM.nextBytes(iv);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
+        if (aad != null) {
+            cipher.updateAAD(aad.getBytes(StandardCharsets.UTF_8));
+        }
+        byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+        byte[] combined = new byte[iv.length + encrypted.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(encrypted, 0, combined, iv.length, encrypted.length);
+        return Base64.getEncoder().encodeToString(combined);
+    }
+
+    private static String decryptGcm(String ciphertext, byte[] key, String aad) throws Exception {
+        byte[] decoded = Base64.getDecoder().decode(ciphertext);
+        byte[] iv = Arrays.copyOfRange(decoded, 0, 12);
+        byte[] encrypted = Arrays.copyOfRange(decoded, 12, decoded.length);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
+        if (aad != null) {
+            cipher.updateAAD(aad.getBytes(StandardCharsets.UTF_8));
+        }
+        return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+    }
+
+    // --- v1 (legacy): SHA-256 + AES-256-CBC ---
 
     private static byte[] deriveKey(String password, String nonce, long timestamp) throws Exception {
         String combined = password + "_" + nonce + "_" + timestamp;

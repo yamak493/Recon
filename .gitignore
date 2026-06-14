@@ -11,6 +11,13 @@ bin/
 .classpath
 target/
 
+# IntelliJ IDEA / IDE files
+.idea/
+*.iml
+
+# Maven shade generated pom
+dependency-reduced-pom.xml
+
 # Compiled class file
 *.class
 
@@ -34,3 +41,6 @@ target/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+# Python bytecode
+__pycache__/
+*.pyc

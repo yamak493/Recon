@@ -23,7 +23,9 @@ public class UserManager {
     private final ConfigManager configManager;
     private final Logger logger;
     private UserStorage storage;
-    private final Map<String, ReconUser> users = new ConcurrentHashMap<>();
+    // リロード時にマップ参照を原子的に差し替えるため volatile とする。
+    // これにより loadUsers() 中に getUser() が空マップを観測する隙間を防ぐ。
+    private volatile Map<String, ReconUser> users = new ConcurrentHashMap<>();
 
     public UserManager(File dataFolder, ConfigManager configManager, Logger logger) {
         this.dataFolder = dataFolder;
@@ -105,8 +107,8 @@ public class UserManager {
     public synchronized void loadUsers() {
         try {
             Map<String, ReconUser> loadedUsers = storage.loadAllUsers();
-            users.clear();
-            users.putAll(loadedUsers);
+            // 新しいマップを構築してから参照を原子的に差し替える（読み取り側の空ウィンドウを排除）
+            this.users = new ConcurrentHashMap<>(loadedUsers);
         } catch (Exception e) {
             logger.severe("Failed to load users from "
                     + storage.getBackendName() + ": " + e.getMessage());

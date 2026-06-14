@@ -186,7 +186,7 @@ public class SchedulerUtil {
                 Consumer<Object> consumer = (scheduledTask) -> task.run();
                 Method runMethod = entityScheduler.getClass().getMethod("runDelayed",
                         Plugin.class, Consumer.class, Runnable.class, long.class);
-                runMethod.invoke(entityScheduler, plugin, consumer, null, delayTicks);
+                runMethod.invoke(entityScheduler, plugin, consumer, null, Math.max(1, delayTicks));
             } catch (Exception e) {
                 // フォールバック
                 Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);

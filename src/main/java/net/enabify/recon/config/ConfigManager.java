@@ -28,11 +28,14 @@ public class ConfigManager {
     private boolean allowSelfRegistration;
     private boolean autoRegistration;
     private int port;
+    private String bindAddress;
     private List<String> globalIpWhitelist;
     private List<String> requestForwardingTargets;
     private boolean allowQueueForAllUsers;
     private int queueExpiryHours;
     private int rateLimit;
+    private boolean allowLegacyProtocol;
+    private int pbkdf2Iterations;
     private String language;
     private UserStorageType userStorageType;
     private boolean migrateUsersFromYamlOnFirstRun;
@@ -160,6 +163,7 @@ public class ConfigManager {
         this.allowSelfRegistration = config.getBoolean("allow-self-registration", false);
         this.autoRegistration = config.getBoolean("auto-registration", false);
         this.port = config.getInt("port", 4161);
+        this.bindAddress = config.getString("bind-address", "");
         this.globalIpWhitelist = config.getStringList("global-ip-whitelist");
         if (this.globalIpWhitelist == null) {
             this.globalIpWhitelist = new ArrayList<>();
@@ -183,6 +187,14 @@ public class ConfigManager {
         this.allowQueueForAllUsers = config.getBoolean("allow-queue-for-all-users", false);
         this.queueExpiryHours = config.getInt("queue-expiry-hours", 72);
         this.rateLimit = config.getInt("rate-limit", 30);
+
+        this.allowLegacyProtocol = getBooleanWithFallback(
+                config, "security.allow-legacy-protocol", "allow-legacy-protocol", true);
+        int iterations = getIntWithFallback(
+                config, "security.pbkdf2-iterations", "pbkdf2-iterations", 100000);
+        // 過小な反復回数は安全性を損なうため下限を設ける
+        this.pbkdf2Iterations = Math.max(10000, iterations);
+
         this.language = config.getString("language", "en");
 
         boolean hasNewDbEnabled = config.contains("database.enabled");
@@ -238,6 +250,14 @@ public class ConfigManager {
         return port;
     }
 
+    /**
+     * HTTPサーバーのバインドアドレスを取得する。
+     * 空文字の場合は全インターフェース（0.0.0.0）にバインドする。
+     */
+    public String getBindAddress() {
+        return bindAddress;
+    }
+
     public List<String> getGlobalIpWhitelist() {
         return globalIpWhitelist;
     }
@@ -256,6 +276,21 @@ public class ConfigManager {
 
     public int getRateLimit() {
         return rateLimit;
+    }
+
+    /**
+     * レガシー(v1)プロトコルを許可するか。
+     * false の場合、ハードン化された v2（PBKDF2 + AES-256-GCM）のみ受け付ける。
+     */
+    public boolean isAllowLegacyProtocol() {
+        return allowLegacyProtocol;
+    }
+
+    /**
+     * v2 鍵導出に用いる PBKDF2 反復回数。
+     */
+    public int getPbkdf2Iterations() {
+        return pbkdf2Iterations;
     }
 
     public String getLanguage() {

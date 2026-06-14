@@ -2,6 +2,7 @@ package net.enabify.recon.proxy.velocity;
 
 import net.enabify.recon.config.QueueManager;
 import net.enabify.recon.model.ReconUser;
+import net.enabify.recon.util.SecureToken;
 import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PostLoginEvent;
@@ -12,7 +13,6 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,8 +76,8 @@ public class VelocityPlayerListener {
             return;
         }
 
-        // パスワードをランダム生成 (8桁)
-        String password = UUID.randomUUID().toString().substring(0, 8);
+        // パスワードを暗号学的に安全なランダム生成 (20文字)
+        String password = SecureToken.generate(20);
         ReconUser newUser = new ReconUser(playerName, password);
         newUser.setPlayer(playerName);
 

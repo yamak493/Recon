@@ -346,12 +346,4 @@ public class PlayerMessageInterceptor {
 
         return null;
     }
-
-    /**
-     * Minecraftカラーコード（§x）を除去する
-     */
-    private static String cleanColorCodes(String message) {
-        if (message == null) return null;
-        return message.replaceAll("\u00a7[0-9a-fk-or]", "");
-    }
 }
