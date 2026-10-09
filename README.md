@@ -1,4 +1,8 @@
-﻿# Recon: The Next-Generation Remote Control tool for Minecraft
+﻿> [!CAUTION]
+> **Deprecated / Unmaintained**  
+> This project is no longer actively developed or maintained.
+
+# Recon: The Next-Generation Remote Control tool for Minecraft
 
 **Recon** is a modern, secure, and reliable REST API-based alternative to the traditional Minecraft RCON protocol. Designed for stability and ease of integration, Recon solves the common issues associated with RCON, such as connection drops, permission management difficulties, and inconsistent response handling.
 
@@ -115,6 +119,4 @@ Get it on [Google Play](https://play.google.com/store/apps/details?id=net.enabif
 
 ## License
 
-Copyright (c) 2026 Enabify. Licensed under the MIT License with additional restrictions regarding mobile application distribution. See [LICENSE](LICENSE) for details.
-
-> **Note**: Redistribution of this software as a mobile application on any digital app store is exclusively reserved for Enabify.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

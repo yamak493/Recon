@@ -22,7 +22,7 @@ recon = Recon(host, port, user, password, timeout)
 
 # Test connection
 print('Testing connection...')
-response = recon.send_command('recon test', queue=True)
+response = recon.send_command('recon', queue=True)
 
 if response['success']:
     print('Connection successful!')
